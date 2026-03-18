@@ -14,7 +14,10 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
-export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps) {
+export default function FileDropZone({
+  files,
+  onFilesChange,
+}: FileDropZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -93,10 +96,10 @@ export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => inputRef.current?.click()}
-        className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
+        className={`border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all ${
           isDragging
-            ? "border-accent bg-accent/10"
-            : "border-gray-600 hover:border-accent/50 hover:bg-white/5"
+            ? "border-fam-orange bg-fam-orange/5"
+            : "border-gray-200 hover:border-fam-orange/50 hover:bg-fam-off-white"
         }`}
       >
         <input
@@ -107,47 +110,84 @@ export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps
           onChange={handleInputChange}
           className="hidden"
         />
-        <div className="text-4xl mb-3">
-          {isDragging ? "\u{1F4E5}" : "\u{1F4C1}"}
+        {/* Upload Icon */}
+        <div className="flex justify-center mb-4">
+          <svg
+            className="w-12 h-12 text-fam-orange"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.5}
+              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+            />
+          </svg>
         </div>
-        <p className="text-gray-300 text-sm">
+        <p className="text-fam-gray text-sm">
           Drag and drop files here, or{" "}
-          <span className="text-accent font-medium">browse</span>
+          <span className="text-fam-orange font-semibold">browse</span>
         </p>
-        <p className="text-gray-500 text-xs mt-2">
-          Accepted: PDF, JPG, PNG, DOCX, DOC, TIFF &middot; Max {MAX_FILE_SIZE_MB}MB per file
+        <p className="text-fam-gray-lighter text-xs mt-2">
+          Accepted: PDF, JPG, PNG, DOCX, DOC, TIFF &middot; Max{" "}
+          {MAX_FILE_SIZE_MB}MB per file
         </p>
       </div>
 
-      {error && (
-        <p className="text-danger text-sm mt-2">{error}</p>
-      )}
+      {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
 
       {files.length > 0 && (
         <ul className="mt-4 space-y-2">
           {files.map((file, idx) => (
             <li
               key={`${file.name}-${idx}`}
-              className="flex items-center justify-between bg-primary rounded-lg px-4 py-2"
+              className="flex items-center justify-between bg-fam-off-white rounded-xl px-4 py-3 border border-gray-100"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <span className="text-gray-400 text-sm shrink-0">
-                  {"\u{1F4CE}"}
-                </span>
-                <span className="text-sm text-gray-200 truncate">
+                <svg
+                  className="w-5 h-5 text-fam-gray-lighter shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                  />
+                </svg>
+                <span className="text-sm text-fam-dark truncate">
                   {file.name}
                 </span>
-                <span className="text-xs text-gray-500 shrink-0">
+                <span className="text-xs text-fam-gray-lighter shrink-0">
                   {formatFileSize(file.size)}
                 </span>
               </div>
               <button
                 type="button"
-                onClick={() => removeFile(idx)}
-                className="text-gray-400 hover:text-danger transition-colors ml-3 shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeFile(idx);
+                }}
+                className="text-fam-gray-lighter hover:text-red-500 transition-colors ml-3 shrink-0"
                 aria-label={`Remove ${file.name}`}
               >
-                &times;
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
               </button>
             </li>
           ))}

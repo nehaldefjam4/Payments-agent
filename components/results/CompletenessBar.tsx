@@ -3,15 +3,15 @@ interface CompletenessBarProps {
 }
 
 function getColor(pct: number): string {
-  if (pct >= 80) return "text-success";
-  if (pct >= 50) return "text-warning";
-  return "text-danger";
+  if (pct >= 80) return "text-emerald-600";
+  if (pct >= 50) return "text-amber-500";
+  return "text-red-500";
 }
 
-function getTrackColor(pct: number): string {
-  if (pct >= 80) return "stroke-success";
-  if (pct >= 50) return "stroke-warning";
-  return "stroke-danger";
+function getStrokeColor(pct: number): string {
+  if (pct >= 80) return "#22c55e";
+  if (pct >= 50) return "#f59e0b";
+  return "#ef4444";
 }
 
 export default function CompletenessBar({ percentage }: CompletenessBarProps) {
@@ -21,40 +21,39 @@ export default function CompletenessBar({ percentage }: CompletenessBarProps) {
   const offset = circumference - (clamped / 100) * circumference;
 
   return (
-    <div className="flex flex-col items-center gap-3">
-      <div className="relative w-36 h-36">
-        <svg
-          className="w-full h-full -rotate-90"
-          viewBox="0 0 120 120"
-        >
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 flex flex-col items-center gap-4">
+      <div className="relative w-40 h-40">
+        <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
           <circle
             cx="60"
             cy="60"
             r={radius}
             fill="none"
-            stroke="currentColor"
+            stroke="#f3f4f6"
             strokeWidth="10"
-            className="text-primary"
           />
           <circle
             cx="60"
             cy="60"
             r={radius}
             fill="none"
+            stroke={getStrokeColor(clamped)}
             strokeWidth="10"
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={offset}
-            className={`${getTrackColor(clamped)} transition-all duration-700`}
+            className="transition-all duration-700"
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className={`text-3xl font-bold ${getColor(clamped)}`}>
+          <span className={`text-4xl font-bold ${getColor(clamped)}`}>
             {clamped}%
           </span>
         </div>
       </div>
-      <span className="text-sm text-gray-400">Document Completeness</span>
+      <span className="text-sm font-medium text-fam-gray-light">
+        Document Completeness
+      </span>
     </div>
   );
 }

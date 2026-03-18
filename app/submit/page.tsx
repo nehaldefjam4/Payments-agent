@@ -49,7 +49,9 @@ export default function SubmitPage() {
       router.push(`/submissions/${result.submission_id}`);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Submission failed. Please try again."
+        err instanceof Error
+          ? err.message
+          : "Submission failed. Please try again."
       );
     } finally {
       setSubmitting(false);
@@ -58,14 +60,21 @@ export default function SubmitPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold text-white mb-8">Submit Documents</h1>
+      {/* Page Header */}
+      <div className="bg-fam-black rounded-2xl p-8 mb-8">
+        <h1 className="text-3xl font-bold text-white">Submit Documents</h1>
+        <p className="text-white/60 mt-2 text-sm">
+          Upload property transaction documents for AI-powered compliance
+          verification.
+        </p>
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Transaction Type */}
         <div>
           <label
             htmlFor="transaction_type"
-            className="block text-sm font-medium text-gray-300 mb-2"
+            className="block text-sm font-semibold text-fam-dark mb-2"
           >
             Transaction Type
           </label>
@@ -73,7 +82,7 @@ export default function SubmitPage() {
             id="transaction_type"
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value)}
-            className="w-full rounded-lg bg-primary border border-white/10 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-accent"
+            className="w-full rounded-xl bg-fam-off-white border border-gray-200 px-4 py-3 text-fam-dark focus:outline-none focus:ring-2 focus:ring-fam-orange focus:border-transparent"
           >
             <option value="">Select a transaction type...</option>
             {Object.entries(transactionTypes).map(([key, type]) => (
@@ -86,21 +95,23 @@ export default function SubmitPage() {
 
         {/* Required Documents Info */}
         {selectedTypeData && (
-          <div className="rounded-lg bg-primary-light border border-white/10 p-4">
-            <h3 className="text-sm font-semibold text-accent mb-2">
+          <div className="rounded-2xl bg-white border border-gray-200 p-5">
+            <h3 className="text-sm font-bold text-fam-orange mb-3">
               Required Documents ({selectedTypeData.required_count})
             </h3>
-            <ul className="space-y-1">
+            <ul className="space-y-1.5">
               {selectedTypeData.required.map((doc) => (
                 <li
                   key={doc.id}
-                  className="text-sm text-gray-300 flex items-start gap-2"
+                  className="text-sm text-fam-gray-light flex items-start gap-2"
                 >
-                  <span className="text-accent mt-0.5">*</span>
+                  <span className="text-fam-orange mt-0.5 font-bold">*</span>
                   <span>
-                    <span className="text-white">{doc.name}</span>
+                    <span className="text-fam-dark font-medium">
+                      {doc.name}
+                    </span>
                     {doc.description && (
-                      <span className="text-gray-400 ml-1">
+                      <span className="text-fam-gray-lighter ml-1">
                         -- {doc.description}
                       </span>
                     )}
@@ -110,12 +121,12 @@ export default function SubmitPage() {
             </ul>
             {selectedTypeData.optional_count > 0 && (
               <>
-                <h3 className="text-sm font-semibold text-gray-400 mt-4 mb-2">
+                <h3 className="text-sm font-semibold text-fam-gray-lighter mt-4 mb-2">
                   Optional Documents ({selectedTypeData.optional_count})
                 </h3>
                 <ul className="space-y-1">
                   {selectedTypeData.optional.map((doc) => (
-                    <li key={doc.id} className="text-sm text-gray-400">
+                    <li key={doc.id} className="text-sm text-fam-gray-lighter">
                       {doc.name}
                     </li>
                   ))}
@@ -129,7 +140,7 @@ export default function SubmitPage() {
         <div>
           <label
             htmlFor="broker_name"
-            className="block text-sm font-medium text-gray-300 mb-2"
+            className="block text-sm font-semibold text-fam-dark mb-2"
           >
             Broker Name
           </label>
@@ -139,7 +150,7 @@ export default function SubmitPage() {
             value={brokerName}
             onChange={(e) => setBrokerName(e.target.value)}
             placeholder="Enter broker name"
-            className="w-full rounded-lg bg-primary border border-white/10 px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent"
+            className="w-full rounded-xl bg-fam-off-white border border-gray-200 px-4 py-3 text-fam-dark placeholder-fam-gray-lighter focus:outline-none focus:ring-2 focus:ring-fam-orange focus:border-transparent"
           />
         </div>
 
@@ -147,7 +158,7 @@ export default function SubmitPage() {
         <div>
           <label
             htmlFor="broker_email"
-            className="block text-sm font-medium text-gray-300 mb-2"
+            className="block text-sm font-semibold text-fam-dark mb-2"
           >
             Broker Email
           </label>
@@ -157,7 +168,7 @@ export default function SubmitPage() {
             value={brokerEmail}
             onChange={(e) => setBrokerEmail(e.target.value)}
             placeholder="broker@example.com"
-            className="w-full rounded-lg bg-primary border border-white/10 px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent"
+            className="w-full rounded-xl bg-fam-off-white border border-gray-200 px-4 py-3 text-fam-dark placeholder-fam-gray-lighter focus:outline-none focus:ring-2 focus:ring-fam-orange focus:border-transparent"
           />
         </div>
 
@@ -165,7 +176,7 @@ export default function SubmitPage() {
         <div>
           <label
             htmlFor="property_ref"
-            className="block text-sm font-medium text-gray-300 mb-2"
+            className="block text-sm font-semibold text-fam-dark mb-2"
           >
             Property Reference
           </label>
@@ -175,13 +186,13 @@ export default function SubmitPage() {
             value={propertyRef}
             onChange={(e) => setPropertyRef(e.target.value)}
             placeholder="e.g. PROP-2026-001"
-            className="w-full rounded-lg bg-primary border border-white/10 px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent"
+            className="w-full rounded-xl bg-fam-off-white border border-gray-200 px-4 py-3 text-fam-dark placeholder-fam-gray-lighter focus:outline-none focus:ring-2 focus:ring-fam-orange focus:border-transparent"
           />
         </div>
 
         {/* File Drop Zone */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+          <label className="block text-sm font-semibold text-fam-dark mb-2">
             Upload Documents
           </label>
           <FileDropZone files={files} onFilesChange={setFiles} />
@@ -189,7 +200,7 @@ export default function SubmitPage() {
 
         {/* Error Message */}
         {error && (
-          <div className="rounded-lg bg-danger/20 border border-danger/50 px-4 py-3 text-danger text-sm">
+          <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-red-600 text-sm">
             {error}
           </div>
         )}
@@ -198,7 +209,7 @@ export default function SubmitPage() {
         <button
           type="submit"
           disabled={submitting || !selectedType || files.length === 0}
-          className="w-full flex items-center justify-center gap-2 rounded-lg bg-accent hover:bg-accent-dark disabled:opacity-50 disabled:cursor-not-allowed px-6 py-3 text-white font-semibold transition-colors"
+          className="w-full flex items-center justify-center gap-2 rounded-pill bg-fam-orange hover:bg-fam-orange-light disabled:opacity-50 disabled:cursor-not-allowed px-8 py-3.5 text-white font-bold transition-colors"
         >
           {submitting ? (
             <>

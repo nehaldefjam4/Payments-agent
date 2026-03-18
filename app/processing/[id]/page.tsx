@@ -24,14 +24,17 @@ export default function ProcessingPage() {
 
   return (
     <div className="max-w-3xl mx-auto">
-      <h1 className="text-3xl font-bold text-white mb-2">
-        Processing Submission{" "}
-        <span className="text-accent">{id.slice(0, 8)}...</span>
-      </h1>
-      <p className="text-gray-400 mb-8">
-        Status:{" "}
-        <span className="text-white font-medium">{status}</span>
-      </p>
+      {/* Page Header */}
+      <div className="bg-fam-black rounded-2xl p-8 mb-8">
+        <h1 className="text-3xl font-bold text-white">
+          Processing Submission{" "}
+          <span className="text-fam-orange">{id.slice(0, 8)}...</span>
+        </h1>
+        <p className="text-white/60 mt-2 text-sm">
+          Status:{" "}
+          <span className="text-white font-medium">{status}</span>
+        </p>
+      </div>
 
       {/* Progress Timeline */}
       <ProgressTimeline steps={steps} isComplete={isComplete} />
@@ -40,8 +43,10 @@ export default function ProcessingPage() {
       {!isComplete && (
         <div className="flex flex-col items-center justify-center py-12">
           <Spinner size="lg" />
-          <p className="text-gray-400 mt-4 text-lg">Agent is working...</p>
-          <p className="text-gray-500 mt-1 text-sm">
+          <p className="text-fam-gray-light mt-4 text-lg font-medium">
+            Agent is working...
+          </p>
+          <p className="text-fam-gray-lighter mt-1 text-sm">
             Analyzing documents and checking compliance
           </p>
         </div>
@@ -49,29 +54,31 @@ export default function ProcessingPage() {
 
       {/* Complete Message */}
       {isComplete && (
-        <div className="rounded-lg bg-success/10 border border-success/30 p-6 text-center mt-8">
-          <svg
-            className="w-12 h-12 text-success mx-auto mb-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <p className="text-success text-lg font-semibold">
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-8 text-center mt-8">
+          <div className="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg
+              className="w-8 h-8 text-emerald-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
+          <p className="text-emerald-700 text-lg font-bold">
             Processing complete!
           </p>
-          <p className="text-gray-400 mt-2 text-sm">
+          <p className="text-emerald-600/70 mt-2 text-sm">
             Redirecting to results in a few seconds...
           </p>
           <Link
             href={`/submissions/${id}`}
-            className="inline-block mt-4 text-accent hover:underline text-sm"
+            className="inline-block mt-4 text-fam-orange hover:text-fam-orange-light font-semibold text-sm transition-colors"
           >
             View Results Now
           </Link>

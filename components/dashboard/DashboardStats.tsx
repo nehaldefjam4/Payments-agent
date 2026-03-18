@@ -1,5 +1,4 @@
 import type { Submission } from "@/lib/types";
-import Card from "@/components/ui/Card";
 
 interface DashboardStatsProps {
   submissions: Submission[];
@@ -8,8 +7,8 @@ interface DashboardStatsProps {
 interface StatItem {
   label: string;
   value: string | number;
-  accent: string;
   borderColor: string;
+  valueColor: string;
 }
 
 export default function DashboardStats({ submissions }: DashboardStatsProps) {
@@ -31,53 +30,53 @@ export default function DashboardStats({ submissions }: DashboardStatsProps) {
     {
       label: "Total Submissions",
       value: total,
-      accent: "text-accent",
-      borderColor: "border-accent/30",
+      borderColor: "border-t-fam-orange",
+      valueColor: "text-fam-orange",
     },
     {
       label: "Approved",
       value: approved,
-      accent: "text-success",
-      borderColor: "border-success/30",
+      borderColor: "border-t-emerald-500",
+      valueColor: "text-emerald-600",
     },
     {
       label: "Pending",
       value: pending,
-      accent: "text-warning",
-      borderColor: "border-warning/30",
+      borderColor: "border-t-amber-500",
+      valueColor: "text-amber-500",
     },
     {
       label: "Avg Completeness",
       value: `${avgCompleteness}%`,
-      accent:
-        avgCompleteness >= 80
-          ? "text-success"
-          : avgCompleteness >= 50
-          ? "text-warning"
-          : "text-danger",
       borderColor:
         avgCompleteness >= 80
-          ? "border-success/30"
+          ? "border-t-emerald-500"
           : avgCompleteness >= 50
-          ? "border-warning/30"
-          : "border-danger/30",
+          ? "border-t-amber-500"
+          : "border-t-red-500",
+      valueColor:
+        avgCompleteness >= 80
+          ? "text-emerald-600"
+          : avgCompleteness >= 50
+          ? "text-amber-500"
+          : "text-red-500",
     },
   ];
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {stats.map((stat) => (
-        <Card
+        <div
           key={stat.label}
-          className={`border-l-4 ${stat.borderColor}`}
+          className={`bg-white rounded-2xl shadow-sm border border-gray-100 border-t-4 ${stat.borderColor} p-5`}
         >
-          <p className="text-xs text-gray-400 uppercase tracking-wide">
+          <p className="text-xs text-fam-gray-lighter uppercase tracking-wider font-semibold">
             {stat.label}
           </p>
-          <p className={`text-3xl font-bold mt-1 ${stat.accent}`}>
+          <p className={`text-3xl font-bold mt-2 ${stat.valueColor}`}>
             {stat.value}
           </p>
-        </Card>
+        </div>
       ))}
     </div>
   );

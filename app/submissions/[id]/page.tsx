@@ -19,7 +19,9 @@ export default function SubmissionDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <Spinner size="lg" />
-        <p className="text-gray-400 mt-4">Loading submission details...</p>
+        <p className="text-fam-gray-lighter mt-4">
+          Loading submission details...
+        </p>
       </div>
     );
   }
@@ -27,10 +29,12 @@ export default function SubmissionDetailPage() {
   if (error || !submission) {
     return (
       <div className="text-center py-20">
-        <p className="text-danger text-lg">{error || "Submission not found"}</p>
+        <p className="text-red-500 text-lg font-semibold">
+          {error || "Submission not found"}
+        </p>
         <Link
           href="/submissions"
-          className="text-accent hover:underline mt-4 inline-block"
+          className="text-fam-orange hover:underline mt-4 inline-block font-medium"
         >
           Back to Submissions
         </Link>
@@ -45,7 +49,7 @@ export default function SubmissionDetailPage() {
       {/* Back Link */}
       <Link
         href="/submissions"
-        className="inline-flex items-center gap-1 text-gray-400 hover:text-accent transition-colors mb-6"
+        className="inline-flex items-center gap-1.5 text-fam-gray-light hover:text-fam-orange transition-colors mb-6 text-sm font-medium"
       >
         <svg
           className="w-4 h-4"
@@ -64,28 +68,34 @@ export default function SubmissionDetailPage() {
       </Link>
 
       {/* Header */}
-      <div className="rounded-lg bg-primary border border-white/10 p-6 mb-6">
+      <div className="bg-fam-black rounded-2xl p-6 mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-white">
               Submission {submission.id.slice(0, 8)}...
             </h1>
-            <p className="text-gray-400 mt-1">
+            <p className="text-white/60 mt-1 text-sm">
               {submission.transaction_label || submission.transaction_type}
             </p>
           </div>
-          <div className="text-right text-sm text-gray-400">
+          <div className="text-right text-sm text-white/50">
             <p>
               Broker:{" "}
-              <span className="text-white">{submission.broker_name}</span>
+              <span className="text-white font-medium">
+                {submission.broker_name}
+              </span>
             </p>
             <p>
               Email:{" "}
-              <span className="text-white">{submission.broker_email}</span>
+              <span className="text-white font-medium">
+                {submission.broker_email}
+              </span>
             </p>
             <p>
               Property:{" "}
-              <span className="text-white">{submission.property_ref}</span>
+              <span className="text-white font-medium">
+                {submission.property_ref}
+              </span>
             </p>
           </div>
         </div>
@@ -94,7 +104,9 @@ export default function SubmissionDetailPage() {
       {/* Completeness Bar */}
       {result?.completeness && (
         <div className="mb-6">
-          <CompletenessBar percentage={result.completeness?.completeness_pct ?? 0} />
+          <CompletenessBar
+            percentage={result.completeness?.completeness_pct ?? 0}
+          />
         </div>
       )}
 
@@ -134,20 +146,20 @@ export default function SubmissionDetailPage() {
 
       {/* Agentic Loop Info */}
       {result?.agentic_loop && (
-        <div className="rounded-lg bg-primary border border-white/10 p-4">
-          <h3 className="text-sm font-semibold text-gray-400 mb-2">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+          <h3 className="text-sm font-bold text-fam-dark mb-3">
             Agent Activity
           </h3>
           <div className="flex gap-6 text-sm">
             <div>
-              <span className="text-gray-400">Turns: </span>
-              <span className="text-white font-medium">
+              <span className="text-fam-gray-lighter">Turns: </span>
+              <span className="text-fam-dark font-semibold">
                 {result.agentic_loop.turns}
               </span>
             </div>
             <div>
-              <span className="text-gray-400">Tool Calls: </span>
-              <span className="text-white font-medium">
+              <span className="text-fam-gray-lighter">Tool Calls: </span>
+              <span className="text-fam-dark font-semibold">
                 {result.agentic_loop.tool_calls_count}
               </span>
             </div>

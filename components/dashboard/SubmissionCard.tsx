@@ -2,7 +2,6 @@ import Link from "next/link";
 import type { Submission } from "@/lib/types";
 import { STATUS_LABELS } from "@/lib/constants";
 import Badge from "@/components/ui/Badge";
-import Card from "@/components/ui/Card";
 
 interface SubmissionCardProps {
   submission: Submission;
@@ -27,9 +26,9 @@ function getStatusVariant(
 }
 
 function getCompletenessColor(pct: number): string {
-  if (pct >= 80) return "text-success";
-  if (pct >= 50) return "text-warning";
-  return "text-danger";
+  if (pct >= 80) return "text-emerald-600";
+  if (pct >= 50) return "text-amber-500";
+  return "text-red-500";
 }
 
 function formatDate(dateStr: string): string {
@@ -49,11 +48,13 @@ function formatDate(dateStr: string): string {
 export default function SubmissionCard({ submission }: SubmissionCardProps) {
   return (
     <Link href={`/submissions/${submission.id}`}>
-      <Card className="hover:bg-primary-light/80 transition-colors cursor-pointer">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md hover:border-fam-orange/30 transition-all cursor-pointer group">
         <div className="flex items-start justify-between mb-3">
           <div>
-            <p className="text-xs text-gray-500 font-mono">{submission.id.slice(0, 8)}...</p>
-            <p className="text-sm font-medium text-white mt-0.5">
+            <p className="text-xs text-fam-gray-lighter font-mono">
+              {submission.id.slice(0, 8)}...
+            </p>
+            <p className="text-sm font-semibold text-fam-dark mt-0.5 group-hover:text-fam-orange transition-colors">
               {submission.transaction_label}
             </p>
           </div>
@@ -64,21 +65,24 @@ export default function SubmissionCard({ submission }: SubmissionCardProps) {
         </div>
 
         <div className="flex items-center justify-between text-sm">
-          <span className="text-gray-400">{submission.broker_name}</span>
-          <span className={`font-semibold ${getCompletenessColor(submission.completeness_pct)}`}>
+          <span className="text-fam-gray-light">{submission.broker_name}</span>
+          <span
+            className={`font-bold ${getCompletenessColor(submission.completeness_pct)}`}
+          >
             {submission.completeness_pct}%
           </span>
         </div>
 
-        <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
-          <span className="text-xs text-gray-500">
+        <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+          <span className="text-xs text-fam-gray-lighter">
             {formatDate(submission.created_at)}
           </span>
-          <span className="text-xs text-gray-500">
-            {submission.files_processed} file{submission.files_processed !== 1 ? "s" : ""}
+          <span className="text-xs text-fam-gray-lighter">
+            {submission.files_processed} file
+            {submission.files_processed !== 1 ? "s" : ""}
           </span>
         </div>
-      </Card>
+      </div>
     </Link>
   );
 }

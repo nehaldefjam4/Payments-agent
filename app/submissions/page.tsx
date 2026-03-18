@@ -10,28 +10,38 @@ export default function SubmissionsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-white">Submissions Dashboard</h1>
-        <button
-          onClick={refresh}
-          disabled={loading}
-          className="flex items-center gap-2 rounded-lg bg-primary-light border border-white/10 hover:border-accent/50 px-4 py-2 text-sm text-gray-300 hover:text-white transition-colors disabled:opacity-50"
-        >
-          <svg
-            className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+      {/* Page Header */}
+      <div className="bg-fam-black rounded-2xl p-8 mb-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-white">
+              Submissions Dashboard
+            </h1>
+            <p className="text-white/60 mt-2 text-sm">
+              Track and manage all document submissions.
+            </p>
+          </div>
+          <button
+            onClick={refresh}
+            disabled={loading}
+            className="flex items-center gap-2 rounded-pill bg-white/10 hover:bg-white/20 border border-white/20 px-5 py-2.5 text-sm text-white font-medium transition-colors disabled:opacity-50"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-            />
-          </svg>
-          Refresh
-        </button>
+            <svg
+              className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -41,13 +51,13 @@ export default function SubmissionsPage() {
       {loading && (
         <div className="flex flex-col items-center justify-center py-20">
           <Spinner size="lg" />
-          <p className="text-gray-400 mt-4">Loading submissions...</p>
+          <p className="text-fam-gray-lighter mt-4">Loading submissions...</p>
         </div>
       )}
 
       {/* Error */}
       {error && (
-        <div className="rounded-lg bg-danger/20 border border-danger/50 px-4 py-3 text-danger text-sm mb-6">
+        <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-red-600 text-sm mb-6 mt-6">
           {error}
         </div>
       )}
@@ -55,8 +65,25 @@ export default function SubmissionsPage() {
       {/* Empty State */}
       {!loading && !error && submissions.length === 0 && (
         <div className="text-center py-20">
-          <p className="text-gray-400 text-lg">No submissions yet.</p>
-          <p className="text-gray-500 mt-2">
+          <div className="w-16 h-16 bg-fam-off-white rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg
+              className="w-8 h-8 text-fam-gray-lighter"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+          </div>
+          <p className="text-fam-gray-light text-lg font-semibold">
+            No submissions yet.
+          </p>
+          <p className="text-fam-gray-lighter mt-2 text-sm">
             Submit your first set of documents to get started.
           </p>
         </div>
