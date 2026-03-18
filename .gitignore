@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.env
+.env.local
+demo_submissions/
+processed/
+inbox/
+demo_results.json
+.vercel/
+.claude/
+*.egg-info/
+venv/
+.venv/
+node_modules/
+.next/
+out/

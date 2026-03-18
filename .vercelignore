@@ -1,0 +1,7 @@
+demo_submissions/
+processed/
+inbox/
+demo_results.json
+.claude/
+__pycache__/
+*.pyc
