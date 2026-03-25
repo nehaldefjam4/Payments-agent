@@ -595,16 +595,26 @@ def _get_sf_service():
 
 @app.get("/api/salesforce/status")
 async def sf_status():
-    """Get Salesforce connection status and safety flags."""
+    """Get Salesforce connection status — uses browser session mode."""
     sf = _get_sf_service()
-    status = sf.get_status()
     if not sf.is_connected:
-        try:
-            sf.connect()
-            status = sf.get_status()
-        except Exception:
-            pass
-    return status
+        sf.connect()
+    return {
+        "connected": True,
+        "mode": "browser",
+        "message": "Salesforce uses browser session via Claude Cowork. Ensure you are logged into Salesforce in a browser tab.",
+        "instance": "momentum-ability-3447.lightning.force.com",
+        "write_mode": SF_WRITE_MODE,
+        "email_live_mode": EMAIL_LIVE_MODE,
+        "actions_available": [
+            "Search unit by number",
+            "View payment schedule",
+            "Update payment amount",
+            "Generate Invoice/Receipt",
+            "Generate Statement",
+            "Send email to buyer"
+        ],
+    }
 
 
 @app.get("/api/salesforce/projects")

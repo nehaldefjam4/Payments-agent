@@ -509,57 +509,66 @@ class DailyReconciler:
         tx.match_confidence = 0.0
 
     def _fuzzy_name_match(self, normalized_name: str) -> tuple[str, float]:
-        """Fuzzy match a name against the knowledge base with Arabic name variant support."""
+        """Fuzzy match a name against the knowledge base.
+        Uses exact token matching first (most reliable), then variant expansion.
+        Prioritizes matches where the LAST NAME (surname) matches exactly."""
         parts = normalized_name.split()
         if len(parts) < 2:
             return ("", 0.0)
 
-        # Expand parts with Arabic name variants
-        expanded_parts = set(parts)
-        for p in parts:
-            for canonical, variants in NAME_VARIANTS.items():
-                if p == canonical or p in variants:
-                    expanded_parts.add(canonical)
-                    expanded_parts.update(variants)
+        significant_parts = [p for p in parts if len(p) > 2]
+        if not significant_parts:
+            return ("", 0.0)
 
         best_unit = ""
         best_score = 0.0
 
         for kb_name, kb_unit in self.kb_name_to_unit.items():
-            kb_parts = set(kb_name.split())
-
-            # Expand KB parts with variants too
-            kb_expanded = set(kb_parts)
-            for kp in kb_parts:
-                for canonical, variants in NAME_VARIANTS.items():
-                    if kp == canonical or kp in variants:
-                        kb_expanded.add(canonical)
-                        kb_expanded.update(variants)
-
-            # Token overlap
-            matches = sum(
-                1 for p in expanded_parts
-                if any(
-                    p == kp or (len(p) > 2 and len(kp) > 2 and (p in kp or kp in p))
-                    for kp in kb_expanded
-                ) and len(p) > 2
-            )
-            significant_parts = [p for p in parts if len(p) > 2]
-            if not significant_parts:
+            kb_parts = [k for k in kb_name.split() if len(k) > 2]
+            if not kb_parts:
                 continue
 
-            score = matches / max(len(significant_parts), len([k for k in kb_parts if len(k) > 2]))
+            # Phase 1: EXACT token match (no variant expansion)
+            # Count how many of the input name parts appear exactly in the KB name
+            exact_matches = sum(1 for p in significant_parts if p in kb_parts)
+            exact_score = exact_matches / max(len(significant_parts), len(kb_parts))
 
-            # Bonus: if last name matches (most distinctive part)
-            if len(parts) >= 2 and len(kb_parts) >= 2:
-                if parts[-1] in kb_expanded or any(parts[-1] == kp for kp in kb_expanded):
-                    score = min(1.0, score + 0.15)
+            # Phase 2: Last name (surname) must match for high confidence
+            # The last significant token is typically the surname (most distinctive)
+            last_name = significant_parts[-1] if significant_parts else ""
+            last_name_matches = last_name in kb_parts
+
+            # Phase 3: Variant-aware matching (only for first/middle names)
+            variant_matches = 0
+            for p in significant_parts:
+                if p in kb_parts:
+                    variant_matches += 1
+                    continue
+                # Check Arabic name variants
+                for canonical, variants in NAME_VARIANTS.items():
+                    all_forms = {canonical} | set(variants)
+                    if p in all_forms and any(kp in all_forms for kp in kb_parts):
+                        variant_matches += 1
+                        break
+
+            variant_score = variant_matches / max(len(significant_parts), len(kb_parts))
+
+            # Final score: prioritize exact matches, require surname match for high confidence
+            if last_name_matches and exact_matches >= 2:
+                # Strong match: surname + 2+ other parts match exactly
+                score = min(1.0, exact_score + 0.1)
+            elif last_name_matches:
+                # Surname matches but fewer exact tokens
+                score = min(0.85, variant_score)
+            else:
+                # Surname doesn't match — much lower confidence
+                score = min(0.5, variant_score * 0.6)
 
             if score > best_score and score >= 0.4:
                 best_score = score
                 best_unit = kb_unit
 
-        return (best_unit, best_score)
+        return (best_unit, min(best_score, 1.0))
 
     # =================================================================
     # STEP 4: Update master sheet with new transactions
