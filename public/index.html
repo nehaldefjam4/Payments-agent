@@ -775,31 +775,21 @@ tbody tr:last-child td { border-bottom: none; }
       <div class="section-title">Connection Setup</div>
       <div class="card" id="sfSetupCard">
         <div class="card-header">
-          <div class="card-title">Salesforce Connection Setup</div>
-        </div>
-        <div class="grid-2">
-          <div class="sf-form-group">
-            <label class="sf-form-label" for="sfUsername">Salesforce Username</label>
-            <input type="text" class="sf-form-input" id="sfUsername" placeholder="user@company.com" autocomplete="off">
-          </div>
-          <div class="sf-form-group">
-            <label class="sf-form-label" for="sfPassword">Salesforce Password</label>
-            <input type="password" class="sf-form-input" id="sfPassword" placeholder="Your Salesforce password" autocomplete="off">
-          </div>
-          <div class="sf-form-group" style="grid-column: 1 / -1;">
-            <label class="sf-form-label" for="sfSecurityToken">Security Token <span style="color:var(--text-muted); font-weight:400;">(required by Salesforce)</span></label>
-            <input type="text" class="sf-form-input" id="sfSecurityToken" placeholder="Get it from: SF Settings > Reset My Security Token" autocomplete="off">
-            <div style="margin-top:6px; font-size:0.72rem; color:var(--text-muted);">
-              In Salesforce: Click your avatar > Settings > Reset My Security Token. The token is emailed to you.
-            </div>
+          <div>
+            <div class="card-title">Salesforce Browser Session</div>
+            <div class="card-subtitle">Salesforce uses your browser session &mdash; just ensure you're logged in to Salesforce in another tab.</div>
           </div>
         </div>
+        <div style="padding:16px 0 8px 0; font-size:0.88rem; color:var(--text-muted); line-height:1.6;">
+          Salesforce connection uses your browser session. Make sure you are logged into Salesforce in another browser tab.
+        </div>
+        <input type="hidden" id="sfSecurityToken" value="">
         <input type="hidden" id="sfClientId" value="">
         <input type="hidden" id="sfClientSecret" value="">
         <input type="hidden" id="sfInstanceUrl" value="momentum-ability-3447.my.salesforce.com">
-        <div style="margin-top:16px; display:flex; align-items:center; gap:12px;">
-          <button class="btn btn-primary" id="btnSfSave" onclick="saveSalesforceSettings()">
-            Save &amp; Connect
+        <div style="margin-top:12px; display:flex; align-items:center; gap:12px;">
+          <button class="btn btn-primary" id="btnSfSave" onclick="checkSalesforceConnection()">
+            &#128269; Check Connection
           </button>
           <span id="sfSaveSpinner" style="display:none;"><span class="spinner"></span></span>
         </div>
@@ -887,7 +877,7 @@ tbody tr:last-child td { border-bottom: none; }
           <div class="stat-value" id="dsAIMatched" style="color:var(--blue);">--</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Receipts Generated</div>
+          <div class="stat-label">Needs Receipt</div>
           <div class="stat-value" id="dsReceipts" style="color:var(--purple);">--</div>
         </div>
       </div>
@@ -907,10 +897,28 @@ tbody tr:last-child td { border-bottom: none; }
     </div>
 
     <div class="section">
+      <div class="section-title">Knowledge Base Stats</div>
+      <div class="card" id="dashKBStats">
+        <div class="empty-state" style="padding:30px;">
+          <div class="empty-state-text">Run the agent to see knowledge base stats</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
       <div class="section-title">Unreconciled Summary</div>
       <div class="card" id="dashUnreconciled">
         <div class="empty-state" style="padding:30px;">
           <div class="empty-state-text">No unreconciled data available</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Needs Receipt</div>
+      <div class="card" id="dashNeedsReceipt">
+        <div class="empty-state" style="padding:30px;">
+          <div class="empty-state-text">No units needing receipts</div>
         </div>
       </div>
     </div>
@@ -1077,11 +1085,8 @@ function runAgent() {
 var STEP_LABELS = [
   'Receiving uploaded documents',
   'Building knowledge base from master sheet',
-  'Parsing bank statements & rule-based matching',
-  'Claude AI analysis for unmatched transactions',
-  'Salesforce sync & installment matching',
-  'Updating master sheet with matched data',
-  'Generating payment receipts'
+  'Parsing bank statements & finding new transactions',
+  'Matching transactions to units (rule-based + AI)'
 ];
 
 function initSteps() {
@@ -1194,14 +1199,24 @@ function renderMethodBars(containerId, byMethod, total) {
   var methodColors = {
     'unit_in_narration': 'unit',
     'name_from_kb': 'name',
+    'name_substring': 'name',
     'name_fuzzy': 'fuzzy',
-    'ai_match': 'ai'
+    'name_in_narration': 'name',
+    'ai_match': 'ai',
+    'ai_name_match': 'ai',
+    'ai_amount_match': 'ai',
+    'ai_pattern': 'ai'
   };
   var methodLabels = {
     'unit_in_narration': 'Unit in Narration',
     'name_from_kb': 'Name from KB',
+    'name_substring': 'Name Substring',
     'name_fuzzy': 'Fuzzy Name Match',
-    'ai_match': 'AI Match'
+    'name_in_narration': 'Name in Narration',
+    'ai_match': 'AI Match',
+    'ai_name_match': 'AI Name Match',
+    'ai_amount_match': 'AI Amount Match',
+    'ai_pattern': 'AI Pattern'
   };
   var html = '';
   Object.keys(byMethod).forEach(function(k) {
@@ -1543,13 +1558,65 @@ function buildSFActions(data) {
     log.innerHTML = html;
   }
 
-  /* Build SF Workflow from needs_receipt */
+  /* Build SF Workflow from ALL pending units:
+     - needs_receipt: units that need receipts
+     - unreconciled.matched_details: newly matched units from unreconciled scan
+     - matched_details: new transaction matches */
+  var allPendingUnits = [];
+  var seenUnits = {};
+
+  /* Add needs_receipt items */
   var needsReceipt = data.needs_receipt || [];
   STATE.needsReceiptData = needsReceipt;
-  if (needsReceipt.length > 0) {
+  needsReceipt.forEach(function(item) {
+    var unitNo = item.unit_no || item.unit || 'unknown';
+    if (!seenUnits[unitNo]) {
+      seenUnits[unitNo] = true;
+      allPendingUnits.push(item);
+    }
+  });
+
+  /* Add unreconciled matched_details */
+  var unrec = data.unreconciled || {};
+  (unrec.matched_details || []).forEach(function(item) {
+    var unitNo = item.unit_no || item.unit || 'unknown';
+    if (!seenUnits[unitNo]) {
+      seenUnits[unitNo] = true;
+      allPendingUnits.push({
+        unit_no: unitNo,
+        amount: item.credit || item.amount || 0,
+        account_name: item.account_name || item.client_name || '',
+        client_name: item.account_name || item.client_name || '',
+        date: item.date || item.value_date || '',
+        match_method: item.match_method || item.method || '',
+        narration: item.narration || item.description || '',
+        _source: 'unreconciled_matched'
+      });
+    }
+  });
+
+  /* Add matched_details (new transaction matches) */
+  (data.matched_details || []).forEach(function(item) {
+    var unitNo = item.unit_no || item.unit || 'unknown';
+    if (!seenUnits[unitNo]) {
+      seenUnits[unitNo] = true;
+      allPendingUnits.push({
+        unit_no: unitNo,
+        amount: item.credit || item.amount || 0,
+        account_name: item.account_name || item.client_name || item.client || '',
+        client_name: item.account_name || item.client_name || item.client || '',
+        date: item.date || item.value_date || '',
+        match_method: item.match_method || item.method || '',
+        narration: item.narration || item.description || '',
+        _source: 'matched'
+      });
+    }
+  });
+
+  if (allPendingUnits.length > 0) {
     /* Initialize workflow state for each unit */
     STATE.sfWorkflow = {};
-    needsReceipt.forEach(function(item) {
+    allPendingUnits.forEach(function(item) {
       var unitNo = item.unit_no || item.unit || 'unknown';
       STATE.sfWorkflow[unitNo] = {
         state: 'pending', /* pending, confirmed, sf_updated, receipt_done, email_sent */
@@ -1881,65 +1948,179 @@ function renderUnitResult(el, data) {
 function updateDashboard(data) {
   var m = data.matching || {};
   var ai = data.ai_matching || {};
-  var receipts = data.receipts || [];
+  var needsReceipt = data.needs_receipt || [];
 
   /* Set reconciliation date */
   setReconDate();
 
-  document.getElementById('dsTotalTx').textContent = m.total_new || 0;
+  /* a) Total Transactions = matched + unmatched */
+  document.getElementById('dsTotalTx').textContent = (m.matched || 0) + (m.unmatched || 0);
+  /* b) Matched */
   document.getElementById('dsMatched').textContent = m.matched || 0;
+  /* c) Unmatched */
   document.getElementById('dsUnmatched').textContent = m.unmatched || 0;
+  /* d) AI Matched */
   document.getElementById('dsAIMatched').textContent = ai.ai_matched_count || 0;
-  document.getElementById('dsReceipts').textContent = receipts.length || 0;
+  /* e) Needs Receipt */
+  document.getElementById('dsReceipts').textContent = needsReceipt.length || 0;
 
-  /* Method breakdown chart */
+  /* f) Method breakdown chart with ALL method labels */
+  var methodLabels = {
+    'unit_in_narration': 'Unit in Narration',
+    'name_from_kb': 'Name from KB',
+    'name_substring': 'Name Substring',
+    'name_fuzzy': 'Fuzzy Name Match',
+    'name_in_narration': 'Name in Narration',
+    'ai_match': 'AI Match',
+    'ai_name_match': 'AI Name Match',
+    'ai_amount_match': 'AI Amount Match',
+    'ai_pattern': 'AI Pattern'
+  };
+  var methodColors = {
+    'unit_in_narration': 'unit',
+    'name_from_kb': 'name',
+    'name_substring': 'name',
+    'name_fuzzy': 'fuzzy',
+    'name_in_narration': 'name',
+    'ai_match': 'ai',
+    'ai_name_match': 'ai',
+    'ai_amount_match': 'ai',
+    'ai_pattern': 'ai'
+  };
   var byMethod = m.by_method || {};
   if (Object.keys(byMethod).length) {
-    renderMethodBars('dashMethodChart', byMethod, m.total_new || 1);
+    var total = (m.matched || 0) + (m.unmatched || 0);
+    if (!total) total = 1;
+    var chartEl = document.getElementById('dashMethodChart');
+    var chartHtml = '';
+    Object.keys(byMethod).forEach(function(k) {
+      var pct = Math.round((byMethod[k] / total) * 100);
+      var cls = methodColors[k] || 'unit';
+      var label = methodLabels[k] || k;
+      chartHtml +=
+        '<div class="bar-row">' +
+        '<div class="bar-label">' + label + '</div>' +
+        '<div class="bar-track"><div class="bar-fill ' + cls + '" style="width:' + Math.max(pct, 4) + '%">' + byMethod[k] + '</div></div>' +
+        '</div>';
+    });
+    chartEl.innerHTML = chartHtml;
   }
 
-  /* Unreconciled summary */
+  /* i) Knowledge Base Stats */
+  var kbEl = document.getElementById('dashKBStats');
+  var ms = data.master_stats || {};
+  if (ms.units_known || ms.names_known) {
+    var kbHtml =
+      '<div style="display:flex; gap:24px; flex-wrap:wrap; font-size:0.88rem;">' +
+      '<div><span style="font-weight:700; color:#fff;">' + (ms.units_known || 0) + '</span> <span style="color:var(--text-muted);">units known</span></div>' +
+      '<div><span style="font-weight:700; color:#fff;">' + (ms.names_known || 0) + '</span> <span style="color:var(--text-muted);">names known</span></div>';
+    if (ms.escrow_cutoff) {
+      kbHtml += '<div><span style="color:var(--text-muted);">Escrow cutoff:</span> <span style="font-weight:600; color:#fff;">' + escHtml(ms.escrow_cutoff) + '</span></div>';
+    }
+    if (ms.corporate_cutoff) {
+      kbHtml += '<div><span style="color:var(--text-muted);">Corporate cutoff:</span> <span style="font-weight:600; color:#fff;">' + escHtml(ms.corporate_cutoff) + '</span></div>';
+    }
+    kbHtml += '</div>';
+    kbEl.innerHTML = kbHtml;
+  }
+
+  /* g) Unreconciled summary */
   var unrec = data.unreconciled || {};
   var unrecEl = document.getElementById('dashUnreconciled');
-  var unrecCount = unrec.total || unrec.count || 0;
-  var unrecItems = unrec.items || [];
+  var totalFound = unrec.total_found || unrec.total || 0;
+  var nowMatched = unrec.now_matched || 0;
+  var stillUnmatched = unrec.still_unmatched || 0;
+  var matchedDetails = unrec.matched_details || [];
+  var unmatchedDetails = unrec.unmatched_details || [];
 
-  if (unrecCount || unrecItems.length) {
+  if (totalFound || matchedDetails.length || unmatchedDetails.length) {
     var html =
-      '<div style="margin-bottom:12px;">' +
-      '<span style="font-size:1.2rem; font-weight:700; color:var(--amber);">' + unrecCount + '</span> ' +
-      '<span style="color:var(--text-muted);">previously unreconciled transactions</span></div>';
+      '<div style="margin-bottom:16px; display:flex; gap:24px; flex-wrap:wrap; font-size:0.88rem;">' +
+      '<div><span style="font-size:1.2rem; font-weight:700; color:var(--amber);">' + totalFound + '</span> <span style="color:var(--text-muted);">total scanned</span></div>' +
+      '<div><span style="font-size:1.2rem; font-weight:700; color:var(--green);">' + nowMatched + '</span> <span style="color:var(--text-muted);">newly matched</span></div>' +
+      '<div><span style="font-size:1.2rem; font-weight:700; color:var(--red);">' + stillUnmatched + '</span> <span style="color:var(--text-muted);">still unmatched</span></div>' +
+      '</div>';
 
-    if (unrecItems.length) {
+    /* Matched table */
+    if (matchedDetails.length) {
       html +=
+        '<div style="margin-bottom:16px;"><div style="font-size:0.78rem; font-weight:600; color:var(--green); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">Newly Matched</div>' +
         '<div class="table-wrap"><table><thead><tr>' +
-        '<th>Date</th><th>Narration</th><th>Amount</th><th>Account</th>' +
+        '<th>Row</th><th>Date</th><th>Amount</th><th>Unit</th><th>Client</th><th>Method</th>' +
         '</tr></thead><tbody>';
-      unrecItems.forEach(function(item) {
+      matchedDetails.forEach(function(item) {
         html +=
-          '<tr>' +
-          '<td>' + (item.date || '-') + '</td>' +
-          '<td>' + escHtml(item.narration || '-') + '</td>' +
-          '<td style="font-variant-numeric:tabular-nums;">' + formatAmount(item.amount || 0) + '</td>' +
-          '<td>' + (item.account || '-') + '</td></tr>';
+          '<tr class="row-matched">' +
+          '<td>' + (item.row || item.row_number || '-') + '</td>' +
+          '<td>' + (item.date || item.value_date || '-') + '</td>' +
+          '<td style="font-variant-numeric:tabular-nums;">' + formatAmount(item.credit || item.amount || 0) + '</td>' +
+          '<td style="font-weight:600; color:#fff;">' + escHtml(item.unit_no || '-') + '</td>' +
+          '<td>' + escHtml(item.account_name || item.client_name || '-') + '</td>' +
+          '<td><span class="badge badge-dim" style="font-size:0.68rem;">' + escHtml(item.match_method || item.method || '-') + '</span></td>' +
+          '</tr>';
       });
-      html += '</tbody></table></div>';
+      html += '</tbody></table></div></div>';
+    }
+
+    /* Unmatched table */
+    if (unmatchedDetails.length) {
+      html +=
+        '<div><div style="font-size:0.78rem; font-weight:600; color:var(--red); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">Still Unmatched</div>' +
+        '<div class="table-wrap"><table><thead><tr>' +
+        '<th>Row</th><th>Date</th><th>Amount</th><th>Narration</th>' +
+        '</tr></thead><tbody>';
+      unmatchedDetails.forEach(function(item) {
+        html +=
+          '<tr class="row-unmatched">' +
+          '<td>' + (item.row || item.row_number || '-') + '</td>' +
+          '<td>' + (item.date || item.value_date || '-') + '</td>' +
+          '<td style="font-variant-numeric:tabular-nums;">' + formatAmount(item.credit || item.amount || 0) + '</td>' +
+          '<td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escHtml(item.narration || item.description || '') + '">' + escHtml(item.narration || item.description || '-') + '</td>' +
+          '</tr>';
+      });
+      html += '</tbody></table></div></div>';
     }
 
     if (unrec.total_amount) {
       html +=
-        '<div style="margin-top:12px; font-size:0.85rem; color:var(--text-muted);">Total unreconciled: ' +
+        '<div style="margin-top:12px; font-size:0.85rem; color:var(--text-muted);">Total unreconciled amount: ' +
         '<strong style="color:var(--red);">' + formatAmount(unrec.total_amount) + '</strong></div>';
     }
 
     unrecEl.innerHTML = html;
+  }
+
+  /* h) Needs Receipt section */
+  var nrEl = document.getElementById('dashNeedsReceipt');
+  if (needsReceipt.length > 0) {
+    var nrHtml =
+      '<div style="margin-bottom:12px;">' +
+      '<span style="font-size:1.2rem; font-weight:700; color:var(--purple);">' + needsReceipt.length + '</span> ' +
+      '<span style="color:var(--text-muted);">units need receipts</span></div>';
+
+    nrHtml +=
+      '<div class="table-wrap"><table><thead><tr>' +
+      '<th>Unit No</th><th>Amount</th><th>Client</th><th>Date</th><th>Method</th>' +
+      '</tr></thead><tbody>';
+    needsReceipt.forEach(function(item) {
+      nrHtml +=
+        '<tr class="row-needs_receipt">' +
+        '<td style="font-weight:600; color:#fff;">' + escHtml(item.unit_no || item.unit || '-') + '</td>' +
+        '<td style="font-variant-numeric:tabular-nums;">' + formatAmount(item.credit || item.amount || 0) + '</td>' +
+        '<td>' + escHtml(item.account_name || item.client_name || item.client || '-') + '</td>' +
+        '<td>' + (item.date || item.value_date || '-') + '</td>' +
+        '<td><span class="badge badge-dim" style="font-size:0.68rem;">' + escHtml(item.match_method || item.method || '-') + '</span></td>' +
+        '</tr>';
+    });
+    nrHtml += '</tbody></table></div>';
+    nrEl.innerHTML = nrHtml;
   }
 }
 
 /* ================================================================
    SALESFORCE SETTINGS (SETUP FORM)
    ================================================================ */
-function saveSalesforceSettings() {
+function checkSalesforceConnection() {
   var btn = document.getElementById('btnSfSave');
   var spinner = document.getElementById('sfSaveSpinner');
   var statusEl = document.getElementById('sfSetupStatus');
@@ -1949,68 +2130,46 @@ function saveSalesforceSettings() {
   statusEl.className = 'sf-setup-status';
   statusEl.style.display = 'none';
 
-  var payload = {
-    username: document.getElementById('sfUsername').value.trim(),
-    password: document.getElementById('sfPassword').value,
-    security_token: document.getElementById('sfSecurityToken').value.trim(),
-    client_id: document.getElementById('sfClientId').value.trim(),
-    client_secret: document.getElementById('sfClientSecret').value,
-    instance_url: document.getElementById('sfInstanceUrl').value.trim()
-  };
-
-  fetch('/api/settings/salesforce', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  })
+  fetch('/api/salesforce/status')
     .then(function(r) { return r.json(); })
     .then(function(data) {
       btn.disabled = false;
       spinner.style.display = 'none';
 
-      if (data.success || data.connected) {
+      if (data.connected) {
         statusEl.className = 'sf-setup-status success';
-        statusEl.textContent = 'Connected successfully' + (data.instance ? ' to ' + data.instance : '') + '.';
+        statusEl.textContent = 'Connected to Salesforce' + (data.instance ? ' (' + data.instance + ')' : '') + '.';
         showToast('Salesforce connected!', 'success');
-        /* Refresh health check to update badges */
         checkHealth();
         loadProjects();
       } else {
         statusEl.className = 'sf-setup-status error';
-        statusEl.textContent = 'Connection failed: ' + (data.error || data.message || 'Unknown error');
-        showToast('Salesforce connection failed', 'error');
+        statusEl.textContent = 'Not connected. Make sure you are logged into Salesforce in another tab. ' + (data.error || data.message || '');
+        showToast('Salesforce not connected', 'error');
       }
     })
     .catch(function(err) {
       btn.disabled = false;
       spinner.style.display = 'none';
       statusEl.className = 'sf-setup-status error';
-      statusEl.textContent = 'Request error: ' + err.message;
+      statusEl.textContent = 'Could not check connection: ' + err.message;
       showToast('Error: ' + err.message, 'error');
     });
 }
 
 function loadSalesforceSettings() {
+  /* Browser session mode - just check connection status on load */
   var statusEl = document.getElementById('sfSetupStatus');
 
-  fetch('/api/settings/salesforce')
+  fetch('/api/salesforce/status')
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      /* Populate form fields if values are returned */
-      if (data.username) document.getElementById('sfUsername').value = data.username;
-      if (data.instance_url) document.getElementById('sfInstanceUrl').value = data.instance_url;
-      if (data.client_id) document.getElementById('sfClientId').value = data.client_id;
-      /* Never populate password/secret/token for security - just show status */
-
       if (data.connected) {
         statusEl.className = 'sf-setup-status success';
-        statusEl.textContent = 'Currently connected' + (data.instance ? ' to ' + data.instance : '') + '.';
-      } else if (data.username) {
-        statusEl.className = 'sf-setup-status info';
-        statusEl.textContent = 'Settings saved but not connected. Check credentials and try again.';
+        statusEl.textContent = 'Connected to Salesforce' + (data.instance ? ' (' + data.instance + ')' : '') + '.';
       }
     })
-    .catch(function() { /* ignore - settings endpoint may not exist yet */ });
+    .catch(function() { /* ignore - endpoint may not exist yet */ });
 }
 
 /* ================================================================
