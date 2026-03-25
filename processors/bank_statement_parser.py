@@ -662,6 +662,15 @@ class BankStatementParser:
         "FUND", "RECEIPT", "INSTALLMENT", "DOWN", "UNIT", "FLAT", "APT",
         "PVT", "LTD", "LLC", "INC", "CORP", "FZE", "FZC", "FZCO",
         "THE", "AND", "FOR", "WITH", "PER", "VIA",
+        # Address/location noise (appears after names in INWARD REMITTANCE)
+        "CIT", "CITY", "BUILDING", "BLDG", "TOWER", "ROAD", "STREET", "ST",
+        "FLOOR", "SUITE", "OFFICE", "BLOCK", "PLOT", "SECTOR", "AREA",
+        "WALK", "YWALK", "MALL", "CENTER", "CENTRE", "GATE", "GARDENS",
+        "RESIDENCE", "RESIDENCES", "VILLAGE", "SQUARE", "PLAZA", "HEIGHTS",
+        # Transaction noise
+        "GOODS", "SERVICES", "BOUGH", "BOUGHT", "PURCHASED", "SOLD",
+        "REF", "REFNO", "REMITTANCETT", "SDM", "CDC", "MOBILE", "BANKING",
+        "ENCASHMENT", "CHEQUES", "DEFAULT", "SID",
     }
 
     def extract_name_from_description(self, description: str) -> str:
@@ -737,10 +746,29 @@ class BankStatementParser:
         return ""
 
     def _clean_name(self, name: str) -> str:
-        """Remove noise words from an extracted name."""
-        parts = name.split()
-        clean = [p for p in parts if p not in self.NOISE_WORDS and len(p) > 1]
-        return " ".join(clean).strip()
+        """Remove noise words from an extracted name. Truncate at first noise/address word."""
+        parts = name.upper().split()
+        clean = []
+        for p in parts:
+            # Stop at first noise word (address, reference, etc.)
+            if p in self.NOISE_WORDS:
+                break
+            # Stop at numbers (account numbers, refs)
+            if any(c.isdigit() for c in p) and len(p) > 3:
+                break
+            # Stop at slash-prefixed tokens (/REF/, /GOODS/)
+            if p.startswith("/"):
+                break
+            if len(p) > 1:
+                clean.append(p)
+        result = " ".join(clean).strip()
+        # Must have at least 2 name parts to be valid
+        if len(clean) < 2:
+            # Try without truncation — just remove noise words
+            clean2 = [p for p in parts if p not in self.NOISE_WORDS and len(p) > 1 and not any(c.isdigit() for c in p)]
+            if len(clean2) >= 2:
+                result = " ".join(clean2[:4]).strip()  # Take first 4 clean words max
+        return result
 
     def _extract_name_fallback(self, text: str) -> str:
         """Fallback: find the longest consecutive name-like word sequence."""
