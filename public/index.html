@@ -2196,15 +2196,15 @@ function checkHealth() {
         sfBadge.className = 'badge badge-green';
         document.getElementById('sfStatusIcon').className = 'sf-status-icon connected';
         document.getElementById('sfStatusIcon').innerHTML = '&#9889;';
-        document.getElementById('sfStatusText').textContent = 'Connected to Salesforce';
-        document.getElementById('sfStatusSub').textContent = data.salesforce.instance || 'Salesforce org';
+        document.getElementById('sfStatusText').textContent = 'Connected (Browser Session)';
+        document.getElementById('sfStatusSub').textContent = 'Via Claude Cowork — ' + (data.salesforce.instance || 'Salesforce');
       } else {
         sfDot.className = 'badge-dot badge-dot-red';
         sfBadge.className = 'badge badge-dim';
         document.getElementById('sfStatusIcon').className = 'sf-status-icon disconnected';
         document.getElementById('sfStatusIcon').innerHTML = '&#9729;';
         document.getElementById('sfStatusText').textContent = 'Not Connected';
-        document.getElementById('sfStatusSub').textContent = 'Salesforce credentials not configured';
+        document.getElementById('sfStatusSub').textContent = 'Open Salesforce in another tab and refresh';
       }
 
       /* AI badge */

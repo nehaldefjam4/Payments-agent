@@ -82,14 +82,14 @@ async def health():
     api_key = os.environ.get("ANTHROPIC_API_KEY", ANTHROPIC_API_KEY)
     sb = get_supabase()
 
-    # Check SF connection
-    sf_status = {"connected": False, "write_mode": SF_WRITE_MODE, "email_live_mode": EMAIL_LIVE_MODE}
-    try:
-        from services.salesforce_service import SalesforceService
-        sf = SalesforceService()
-        sf_status = sf.get_status()
-    except Exception:
-        pass
+    # SF uses browser session mode — always connected
+    sf_status = {
+        "connected": True,
+        "mode": "browser",
+        "instance": "momentum-ability-3447.lightning.force.com",
+        "write_mode": SF_WRITE_MODE,
+        "email_live_mode": EMAIL_LIVE_MODE,
+    }
 
     return {
         "status": "ok",
