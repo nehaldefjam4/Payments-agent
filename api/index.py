@@ -64,12 +64,12 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 @app.get("/", response_class=HTMLResponse)
 async def root():
-    # Read HTML file directly to avoid Python module caching issues
-    import importlib
-    import api._amit_html as _html_mod
-    importlib.reload(_html_mod)
+    # Read HTML from static file to avoid Python .pyc caching on Vercel
+    html_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "public", "dashboard.html")
+    with open(html_path, "r", encoding="utf-8") as f:
+        html_content = f.read()
     return HTMLResponse(
-        content=_html_mod.AMIT_DASHBOARD_HTML,
+        content=html_content,
         headers={"Cache-Control": "no-cache, no-store, must-revalidate"}
     )
 
