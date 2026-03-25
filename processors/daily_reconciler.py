@@ -114,20 +114,23 @@ class DailyReconciler:
 
         # Find unreconciled rows and try to match them
         self._unreconciled_rows = []
+        self._needs_receipt = []  # Rows with unit but no receipt
         self._scan_unreconciled(wb)
         stats["unreconciled_found"] = len(self._unreconciled_rows)
         stats["unreconciled_matched"] = sum(1 for u in self._unreconciled_rows if u.get("unit_no"))
+        stats["needs_receipt"] = len(self._needs_receipt)
 
         return stats
 
     def _scan_unreconciled(self, wb):
-        """Scan master sheet for rows without a unit assignment and try to match them."""
+        """Scan master sheet for rows without a unit assignment and try to match them.
+        Uses ALL matching methods: unit extraction, KB name, fuzzy, substring, narration scan."""
         from processors.bank_statement_parser import BankStatementParser
         parser = BankStatementParser()
 
-        for sheet_name, unit_col, narr_col, credit_col, acct_type in [
-            ("Updated Sheet_Escrow Account", 8, 3, 6, "escrow"),
-            ("Updated Sheet_Corporate", 7, 2, 5, "corporate"),
+        for sheet_name, unit_col, narr_col, credit_col, name_col, receipt_col, acct_type in [
+            ("Updated Sheet_Escrow Account", 8, 3, 6, 9, 10, "escrow"),
+            ("Updated Sheet_Corporate", 7, 2, 5, 8, None, "corporate"),
         ]:
             if sheet_name not in wb.sheetnames:
                 continue
@@ -144,29 +147,98 @@ class DailyReconciler:
                 if credit_float <= 0:
                     continue
 
+                # Date filter: only process 2026+ transactions
+                date_val = ws.cell(r, 1).value
+                parsed_date = self._parse_date(date_val)
+                if parsed_date and parsed_date.year < 2026:
+                    continue
+
                 unit_val = ws.cell(r, unit_col).value
                 unit_str = str(unit_val).strip() if unit_val else ""
 
-                # Skip rows that already have a unit
-                if unit_str and unit_str not in ("0", "0.0", "None", "", "UNMATCHED"):
+                # Check receipt status
+                receipt_val = ""
+                if receipt_col:
+                    receipt_val = str(ws.cell(r, receipt_col).value or "").strip()
+
+                # Skip rows that already have a unit assigned
+                has_unit = unit_str and unit_str not in ("0", "0.0", "None", "", "UNMATCHED")
+                if has_unit:
+                    # Track rows with unit but no receipt (for SF receipt generation)
+                    if receipt_col and not receipt_val:
+                        self._needs_receipt.append({
+                            "row": r,
+                            "sheet": sheet_name,
+                            "account": acct_type,
+                            "date": str(date_val) if date_val else "",
+                            "credit": credit_float,
+                            "unit_no": unit_str.split(".")[0].split("-")[0].split(" ")[0],
+                            "account_name": str(ws.cell(r, name_col).value or "") if name_col else "",
+                        })
                     continue
 
                 narr = str(ws.cell(r, narr_col).value or "")
-                date_val = ws.cell(r, 1).value
 
-                # Try to match using narration patterns
-                unit, conf = parser.extract_unit_from_description(narr)
-                name = parser.extract_name_from_description(narr)
+                # === Multi-method matching ===
+                unit = ""
+                conf = 0.0
                 match_method = ""
+                name = ""
 
+                # Method 1: Unit number in narration
+                unit, conf = parser.extract_unit_from_description(narr)
                 if unit and conf >= 0.80:
                     match_method = "unit_in_narration"
-                elif name:
+                else:
+                    unit = ""
+                    conf = 0.0
+
+                # Method 2: Extract name + KB lookup
+                if not unit:
+                    name = parser.extract_name_from_description(narr)
+                    if name and len(name) > 3:
+                        normalized = self._normalize_name(name)
+                        # Exact KB match
+                        if normalized in self.kb_name_to_unit:
+                            unit = self.kb_name_to_unit[normalized]
+                            conf = 0.85
+                            match_method = "name_from_kb"
+                        else:
+                            # Substring match
+                            for kb_name, kb_unit in self.kb_name_to_unit.items():
+                                if len(normalized) > 5 and len(kb_name) > 5:
+                                    if normalized in kb_name or kb_name in normalized:
+                                        unit = kb_unit
+                                        conf = 0.82
+                                        match_method = "name_substring"
+                                        break
+
+                # Method 3: Fuzzy name match with Arabic variants
+                if not unit and name and len(name) > 3:
                     normalized = self._normalize_name(name)
-                    if normalized in self.kb_name_to_unit:
-                        unit = self.kb_name_to_unit[normalized]
-                        conf = 0.85
-                        match_method = "name_from_kb"
+                    best_unit, best_score = self._fuzzy_name_match(normalized)
+                    if best_unit and best_score >= 0.4:
+                        unit = best_unit
+                        conf = round(min(0.80, best_score * 0.85), 2)
+                        match_method = "name_fuzzy"
+
+                # Method 4: Direct narration scan against KB names
+                if not unit:
+                    narr_upper = narr.upper()
+                    for kb_name, kb_unit in self.kb_name_to_unit.items():
+                        parts = [p for p in kb_name.split() if len(p) > 2]
+                        if len(parts) < 2:
+                            continue
+                        last = parts[-1]
+                        if last in narr_upper and any(p in narr_upper for p in parts[:-1]):
+                            unit = kb_unit
+                            conf = 0.75
+                            match_method = "name_in_narration"
+                            name = self.kb_unit_to_name.get(kb_unit, "")
+                            break
+
+                if not name and unit:
+                    name = self.kb_unit_to_name.get(unit, "")
 
                 self._unreconciled_rows.append({
                     "row": r,
@@ -176,9 +248,10 @@ class DailyReconciler:
                     "narration": narr[:80],
                     "credit": credit_float,
                     "unit_no": unit,
-                    "account_name": name or (self.kb_unit_to_name.get(unit, "") if unit else ""),
+                    "account_name": name or "",
                     "match_method": match_method,
                     "match_confidence": conf if unit else 0.0,
+                    "receipt_status": receipt_val,
                 })
 
     def _load_sheet_to_kb(self, ws, account_type: str, has_account_name: bool = False) -> int:
@@ -860,6 +933,7 @@ Only return the JSON array, no other text."""
                 "matched_details": ur_matched,
                 "unmatched_details": ur_still,
             },
+            "needs_receipt": self._needs_receipt if hasattr(self, '_needs_receipt') else [],
         }
 
     @staticmethod

@@ -289,6 +289,7 @@ async def reconcile_endpoint(
             "unmatched_details": summary.get("unmatched_details", []),
             "receipts": summary.get("receipts", []),
             "unreconciled": summary.get("unreconciled", {}),
+            "needs_receipt": summary.get("needs_receipt", []),
             "download": {
                 "master_sheet_base64": master_download,
                 "filename": "Updated_Master_Sheet.xlsx",
