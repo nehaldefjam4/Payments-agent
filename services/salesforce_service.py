@@ -38,9 +38,9 @@ SF_USERNAME = os.environ.get("SF_USERNAME", "")
 SF_PASSWORD = os.environ.get("SF_PASSWORD", "")
 SF_SECURITY_TOKEN = os.environ.get("SF_SECURITY_TOKEN", "")
 
-# Safety flags
-SF_WRITE_MODE = os.environ.get("SF_WRITE_MODE", "false").lower() == "true"
-EMAIL_LIVE_MODE = os.environ.get("EMAIL_LIVE_MODE", "false").lower() == "true"
+# Production mode — writes and emails enabled
+SF_WRITE_MODE = os.environ.get("SF_WRITE_MODE", "true").lower() == "true"
+EMAIL_LIVE_MODE = os.environ.get("EMAIL_LIVE_MODE", "true").lower() == "true"
 
 
 @dataclass

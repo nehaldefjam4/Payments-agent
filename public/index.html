@@ -609,14 +609,8 @@ tbody tr:last-child td { border-bottom: none; }
       <option value="auto">Auto-Detect</option>
     </select>
 
-    <span class="badge badge-dim" id="badgeSF">
-      <span class="badge-dot" id="badgeSFDot"></span> SF
-    </span>
-    <span class="badge badge-dim" id="badgeAI">
-      <span class="badge-dot" id="badgeAIDot"></span> AI
-    </span>
-    <span class="badge badge-dim" id="badgeWriteMode">
-      <span class="badge-dot" id="badgeWriteDot"></span> DRY RUN
+    <span class="badge badge-green" id="badgeAI">
+      <span class="badge-dot badge-dot-green" id="badgeAIDot"></span> AI
     </span>
   </div>
 </nav>
@@ -753,19 +747,6 @@ tbody tr:last-child td { border-bottom: none; }
             <div style="font-weight:600; color:#fff;" id="sfStatusText">Checking connection...</div>
             <div style="font-size:0.78rem; color:var(--text-muted);" id="sfStatusSub">Salesforce integration</div>
           </div>
-        </div>
-      </div>
-      <!-- Safety Badges -->
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">Safety Controls</div>
-        </div>
-        <div class="sf-badges" id="sfSafetyBadges">
-          <span class="badge badge-amber" id="sfWriteBadge">SF WRITE: DRY RUN</span>
-          <span class="badge badge-amber" id="sfEmailBadge">EMAIL: DRY RUN</span>
-        </div>
-        <div style="margin-top:12px; font-size:0.78rem; color:var(--text-muted);">
-          All Salesforce writes and emails are disabled by default. Set SF_WRITE_MODE=true and EMAIL_LIVE_MODE=true in environment to enable.
         </div>
       </div>
     </div>
@@ -1514,21 +1495,7 @@ function buildSFActions(data) {
   STATE.sfActions = sf.actions || [];
   var log = document.getElementById('sfActionsLog');
 
-  /* Update safety badges */
-  if (sf.write_mode) {
-    document.getElementById('sfWriteBadge').className = 'badge badge-red';
-    document.getElementById('sfWriteBadge').textContent = 'SF WRITE: LIVE';
-  } else {
-    document.getElementById('sfWriteBadge').className = 'badge badge-amber';
-    document.getElementById('sfWriteBadge').textContent = 'SF WRITE: DRY RUN';
-  }
-  if (sf.email_live_mode) {
-    document.getElementById('sfEmailBadge').className = 'badge badge-red';
-    document.getElementById('sfEmailBadge').textContent = 'EMAIL: LIVE';
-  } else {
-    document.getElementById('sfEmailBadge').className = 'badge badge-amber';
-    document.getElementById('sfEmailBadge').textContent = 'EMAIL: DRY RUN';
-  }
+  /* Safety badges removed — production mode */
 
   if (!STATE.sfActions.length) {
     log.innerHTML =
@@ -1552,7 +1519,6 @@ function buildSFActions(data) {
         '<div>' +
         '<div style="font-weight:600; color:#fff;">' + escHtml(a.unit || a.unit_name || a.action || '-') + '</div>' +
         '<div style="color:var(--text-muted);">' + escHtml(detail) + '</div>' +
-        (a.dry_run ? '<span class="badge badge-amber" style="margin-top:4px;">DRY RUN</span>' : '') +
         '</div></div>';
     });
     log.innerHTML = html;
@@ -2191,21 +2157,11 @@ function checkHealth() {
       /* SF badge */
       var sfDot = document.getElementById('badgeSFDot');
       var sfBadge = document.getElementById('badgeSF');
-      if (data.salesforce && data.salesforce.connected) {
-        sfDot.className = 'badge-dot badge-dot-green';
-        sfBadge.className = 'badge badge-green';
-        document.getElementById('sfStatusIcon').className = 'sf-status-icon connected';
-        document.getElementById('sfStatusIcon').innerHTML = '&#9889;';
-        document.getElementById('sfStatusText').textContent = 'Connected (Browser Session)';
-        document.getElementById('sfStatusSub').textContent = 'Via Claude Cowork — ' + (data.salesforce.instance || 'Salesforce');
-      } else {
-        sfDot.className = 'badge-dot badge-dot-red';
-        sfBadge.className = 'badge badge-dim';
-        document.getElementById('sfStatusIcon').className = 'sf-status-icon disconnected';
-        document.getElementById('sfStatusIcon').innerHTML = '&#9729;';
-        document.getElementById('sfStatusText').textContent = 'Not Connected';
-        document.getElementById('sfStatusSub').textContent = 'Open Salesforce in another tab and refresh';
-      }
+      /* SF status — browser session mode */
+      document.getElementById('sfStatusIcon').className = 'sf-status-icon connected';
+      document.getElementById('sfStatusIcon').innerHTML = '&#9889;';
+      document.getElementById('sfStatusText').textContent = 'Browser Session Mode';
+      document.getElementById('sfStatusSub').textContent = 'Salesforce actions run via Claude Cowork';
 
       /* AI badge */
       var aiDot = document.getElementById('badgeAIDot');
@@ -2218,30 +2174,7 @@ function checkHealth() {
         aiBadge.className = 'badge badge-dim';
       }
 
-      /* Write mode badge */
-      var wDot = document.getElementById('badgeWriteDot');
-      var wBadge = document.getElementById('badgeWriteMode');
-      if (data.safety && data.safety.sf_write_mode) {
-        wDot.className = 'badge-dot badge-dot-red';
-        wBadge.className = 'badge badge-red';
-        wBadge.innerHTML = '<span class="badge-dot badge-dot-red"></span> LIVE';
-      } else {
-        wDot.className = 'badge-dot badge-dot-amber';
-        wBadge.className = 'badge badge-amber';
-        wBadge.innerHTML = '<span class="badge-dot badge-dot-amber"></span> DRY RUN';
-      }
-
-      /* Safety badges in SF tab */
-      if (data.safety) {
-        if (data.safety.sf_write_mode) {
-          document.getElementById('sfWriteBadge').className = 'badge badge-red';
-          document.getElementById('sfWriteBadge').textContent = 'SF WRITE: LIVE';
-        }
-        if (data.safety.email_live_mode) {
-          document.getElementById('sfEmailBadge').className = 'badge badge-red';
-          document.getElementById('sfEmailBadge').textContent = 'EMAIL: LIVE';
-        }
-      }
+      /* Production mode — no dry run badges */
     })
     .catch(function(err) {
       console.warn('Health check failed:', err);

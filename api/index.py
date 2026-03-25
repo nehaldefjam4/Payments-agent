@@ -102,10 +102,6 @@ async def health():
         "claude_enabled": bool(api_key),
         "supabase_connected": sb is not None,
         "salesforce": sf_status,
-        "safety": {
-            "sf_write_mode": SF_WRITE_MODE,
-            "email_live_mode": EMAIL_LIVE_MODE,
-        },
         "timestamp": datetime.now().isoformat(),
     }
 
@@ -207,7 +203,7 @@ async def reconcile_endpoint(
                 sf_actions = reconciler.sync_with_salesforce(sf_service, project_name)
                 steps.append({
                     "step": 5,
-                    "action": f"Salesforce sync: {len(sf_actions)} units processed (write_mode={'ON' if SF_WRITE_MODE else 'DRY RUN'})",
+                    "action": f"Salesforce sync: {len(sf_actions)} units processed",
                     "status": "done",
                 })
             else:
