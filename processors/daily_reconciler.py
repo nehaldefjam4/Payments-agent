@@ -587,7 +587,9 @@ class DailyReconciler:
                 ws.cell(next_row, 4, tx.reference)
                 ws.cell(next_row, 5, tx.debit if tx.debit else 0)
                 ws.cell(next_row, 6, tx.credit if tx.credit else 0)
-                ws.cell(next_row, 7, tx.balance)
+                # Running Balance formula: =G{prev}-E{row}+F{row}
+                prev_row = next_row - 1
+                ws.cell(next_row, 7, f"=G{prev_row}-E{next_row}+F{next_row}")
                 ws.cell(next_row, 8, f"{tx.unit_no}" if tx.unit_no else "UNMATCHED")
                 ws.cell(next_row, 9, tx.account_name)
                 ws.cell(next_row, 10, "")  # Receipt
@@ -607,7 +609,9 @@ class DailyReconciler:
                 ws.cell(next_row, 3, tx.reference)
                 ws.cell(next_row, 4, tx.debit if tx.debit else 0)
                 ws.cell(next_row, 5, tx.credit if tx.credit else 0)
-                ws.cell(next_row, 6, tx.balance)
+                # Running Balance formula: =F{prev}-D{row}+E{row}
+                prev_row = next_row - 1
+                ws.cell(next_row, 6, f"=F{prev_row}-D{next_row}+E{next_row}")
                 ws.cell(next_row, 7, f"{tx.unit_no}" if tx.unit_no else "UNMATCHED")
                 ws.cell(next_row, 8, tx.account_name)
 
