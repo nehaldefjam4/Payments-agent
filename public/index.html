@@ -1565,13 +1565,13 @@ function buildSFActions(data) {
   var allPendingUnits = [];
   var seenUnits = {};
 
-  /* Add needs_receipt items */
+  /* Add needs_receipt items — use unique key per transaction (unit+row+amount) */
   var needsReceipt = data.needs_receipt || [];
   STATE.needsReceiptData = needsReceipt;
   needsReceipt.forEach(function(item) {
-    var unitNo = item.unit_no || item.unit || 'unknown';
-    if (!seenUnits[unitNo]) {
-      seenUnits[unitNo] = true;
+    var key = (item.unit_no || '') + '_' + (item.row || '') + '_' + (item.credit || item.amount || 0);
+    if (!seenUnits[key]) {
+      seenUnits[key] = true;
       allPendingUnits.push(item);
     }
   });
@@ -1580,8 +1580,9 @@ function buildSFActions(data) {
   var unrec = data.unreconciled || {};
   (unrec.matched_details || []).forEach(function(item) {
     var unitNo = item.unit_no || item.unit || 'unknown';
-    if (!seenUnits[unitNo]) {
-      seenUnits[unitNo] = true;
+    var key = unitNo + '_' + (item.row || '') + '_' + (item.credit || item.amount || 0);
+    if (!seenUnits[key]) {
+      seenUnits[key] = true;
       allPendingUnits.push({
         unit_no: unitNo,
         amount: item.credit || item.amount || 0,
@@ -1590,6 +1591,7 @@ function buildSFActions(data) {
         date: item.date || item.value_date || '',
         match_method: item.match_method || item.method || '',
         narration: item.narration || item.description || '',
+        row: item.row || '',
         _source: 'unreconciled_matched'
       });
     }
@@ -1598,8 +1600,9 @@ function buildSFActions(data) {
   /* Add matched_details (new transaction matches) */
   (data.matched_details || []).forEach(function(item) {
     var unitNo = item.unit_no || item.unit || 'unknown';
-    if (!seenUnits[unitNo]) {
-      seenUnits[unitNo] = true;
+    var key = unitNo + '_' + (item.row || '') + '_' + (item.credit || item.amount || 0);
+    if (!seenUnits[key]) {
+      seenUnits[key] = true;
       allPendingUnits.push({
         unit_no: unitNo,
         amount: item.credit || item.amount || 0,
@@ -1614,13 +1617,15 @@ function buildSFActions(data) {
   });
 
   if (allPendingUnits.length > 0) {
-    /* Initialize workflow state for each unit */
+    /* Initialize workflow state for each transaction (not per unit — same unit can have multiple) */
     STATE.sfWorkflow = {};
-    allPendingUnits.forEach(function(item) {
+    allPendingUnits.forEach(function(item, idx) {
       var unitNo = item.unit_no || item.unit || 'unknown';
-      STATE.sfWorkflow[unitNo] = {
+      var txKey = unitNo + '_' + (item.row || idx) + '_' + (item.credit || item.amount || 0);
+      STATE.sfWorkflow[txKey] = {
         state: 'pending', /* pending, confirmed, sf_updated, receipt_done, email_sent */
-        data: item
+        data: item,
+        unit_no: unitNo
       };
     });
     document.getElementById('sfWorkflowSection').style.display = 'block';
@@ -1658,22 +1663,24 @@ function renderSFWorkflow() {
     '<th>Actions</th>' +
     '</tr></thead><tbody>';
 
-  units.forEach(function(unitNo) {
-    var wf = STATE.sfWorkflow[unitNo];
+  units.forEach(function(txKey) {
+    var wf = STATE.sfWorkflow[txKey];
     var item = wf.data;
     var st = wf.state;
+    var unitNo = wf.unit_no || item.unit_no || item.unit || '-';
     var amount = item.credit || item.amount || 0;
     var clientName = item.account_name || item.client_name || item.client || '-';
     var date = item.date || item.value_date || '-';
+    var safeTxKey = txKey.replace(/[^a-zA-Z0-9_]/g, '-');
 
-    html += '<tr id="sfRow-' + escHtml(unitNo) + '">';
+    html += '<tr id="sfRow-' + safeTxKey + '">';
     html += '<td style="font-weight:600; color:#fff;">' + escHtml(unitNo) + '</td>';
     html += '<td style="font-variant-numeric:tabular-nums;">' + formatAmount(amount) + '</td>';
     html += '<td>' + escHtml(clientName) + '</td>';
     html += '<td>' + escHtml(date) + '</td>';
     html += '<td>' + escHtml(quarter) + '</td>';
     html += '<td>' + sfWorkflowBadge(st) + '</td>';
-    html += '<td>' + sfWorkflowActions(unitNo, st) + '</td>';
+    html += '<td>' + sfWorkflowActions(txKey, st) + '</td>';
     html += '</tr>';
   });
 
