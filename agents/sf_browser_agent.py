@@ -94,12 +94,12 @@ class SalesforceBrowserAgent:
             if not unit_no:
                 continue
 
-            # Action 1: Update payment in fam app
+            # Action 1: Check payment in fam app (only update if amount not already recorded)
             self.actions_log.append(SFAction(
                 unit_no=unit_no,
-                action_type="update_payment",
+                action_type="check_payment",
                 status="pending",
-                message=f"Update payment in fam app for Unit {unit_no} — AED {amount:,.2f}",
+                message=f"Check payment in fam app for Unit {unit_no} — AED {amount:,.2f} (skip if already recorded)",
                 details={"amount": amount, "client": client, "app": "fam"},
             ))
 
@@ -164,7 +164,7 @@ class SalesforceBrowserAgent:
         steps = []
 
         # ============================================================
-        # PHASE 1: Update payment in "fam" app
+        # PHASE 1: Check payment in "fam" app (only update if needed)
         # ============================================================
 
         steps.append({
@@ -198,19 +198,14 @@ class SalesforceBrowserAgent:
         steps.append({
             "step": 4,
             "phase": "fam_app",
-            "action": "find_payment",
-            "description": f"Find the payment record for AED {amount:,.2f} (or the next unpaid/overdue one)",
-            "hint": "Look at Sub Total, Status, and Payment Detail columns. Click the BP-XXXXX link",
-            "amount": amount,
-            "wait_after": self.config.wait_seconds,
-        })
-
-        steps.append({
-            "step": 5,
-            "phase": "fam_app",
-            "action": "update_payment",
-            "description": f"Click 'Edit' → Update 'Amount Paid' field to include AED {amount:,.2f} → Click 'Save'",
-            "hint": "The Amount Paid field is in the Payment Information section. Add the new amount to the existing Amount Paid value.",
+            "action": "check_and_update_payment",
+            "description": (
+                f"Find the payment record matching AED {amount:,.2f}. "
+                f"Check if the Sub Total already matches. "
+                f"If the amount is ALREADY set correctly (Status shows Paid or the Sub Total matches), SKIP the update. "
+                f"Only click Edit → update Amount Paid → Save if the payment is NOT yet recorded."
+            ),
+            "hint": "Look at Sub Total, Amount Paid, and Status columns. If Status is 'Paid' and amounts match, skip to next phase.",
             "amount": amount,
             "wait_after": self.config.wait_seconds,
             "confirm": True,
@@ -221,7 +216,7 @@ class SalesforceBrowserAgent:
         # ============================================================
 
         steps.append({
-            "step": 6,
+            "step": 5,
             "phase": "fam_revamp",
             "action": "switch_app",
             "description": "Switch to 'Fam Properties (Revamp)' app",
@@ -230,7 +225,7 @@ class SalesforceBrowserAgent:
         })
 
         steps.append({
-            "step": 7,
+            "step": 6,
             "phase": "fam_revamp",
             "action": "search_unit",
             "description": f"Search for Unit {unit_no} in the Revamp app",
@@ -239,7 +234,7 @@ class SalesforceBrowserAgent:
         })
 
         steps.append({
-            "step": 8,
+            "step": 7,
             "phase": "fam_revamp",
             "action": "go_to_payments",
             "description": "Click 'Payments' tab → find the same payment record",
@@ -248,7 +243,7 @@ class SalesforceBrowserAgent:
         })
 
         steps.append({
-            "step": 9,
+            "step": 8,
             "phase": "fam_revamp",
             "action": "generate_invoice",
             "description": "Click 'Generate Invoice' button to create the receipt",
@@ -258,7 +253,7 @@ class SalesforceBrowserAgent:
         })
 
         steps.append({
-            "step": 10,
+            "step": 9,
             "phase": "fam_revamp",
             "action": "confirm_dialog",
             "description": "Handle any confirmation dialog — click OK/Confirm/Save",
@@ -267,7 +262,7 @@ class SalesforceBrowserAgent:
         })
 
         steps.append({
-            "step": 11,
+            "step": 10,
             "phase": "fam_revamp",
             "action": "go_back_to_unit",
             "description": f"Click the Unit '{unit_no}' link to go back to the inventory record",
@@ -276,7 +271,7 @@ class SalesforceBrowserAgent:
         })
 
         steps.append({
-            "step": 12,
+            "step": 11,
             "phase": "fam_revamp",
             "action": "go_to_statements",
             "description": "Click 'Account Statements' tab to verify/generate statement",
@@ -285,7 +280,7 @@ class SalesforceBrowserAgent:
         })
 
         steps.append({
-            "step": 13,
+            "step": 12,
             "phase": "fam_revamp",
             "action": "send_email",
             "description": f"Send email to buyer ({client}) with receipt + statement attached",
