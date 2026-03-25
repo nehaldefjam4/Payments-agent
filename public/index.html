@@ -721,7 +721,6 @@ tbody tr:last-child td { border-bottom: none; }
       <button class="btn btn-ghost active" data-filter="all" onclick="filterTx('all')">All</button>
       <button class="btn btn-ghost" data-filter="matched" onclick="filterTx('matched')">Matched</button>
       <button class="btn btn-ghost" data-filter="unmatched" onclick="filterTx('unmatched')">Unmatched</button>
-      <button class="btn btn-ghost" data-filter="ai_matched" onclick="filterTx('ai_matched')">AI Matched</button>
       <button class="btn btn-ghost" data-filter="review" onclick="filterTx('review')">Needs Review</button>
       <button class="btn btn-ghost" data-filter="needs_receipt" onclick="filterTx('needs_receipt')">Needs Receipt</button>
     </div>
@@ -840,7 +839,7 @@ tbody tr:last-child td { border-bottom: none; }
     </div>
     <div class="section">
       <div class="section-title">Overview</div>
-      <div class="grid-5" id="dashboardStats">
+      <div class="grid-4" id="dashboardStats">
         <div class="stat-card">
           <div class="stat-label">Total Transactions</div>
           <div class="stat-value" id="dsTotalTx">--</div>
@@ -852,10 +851,6 @@ tbody tr:last-child td { border-bottom: none; }
         <div class="stat-card">
           <div class="stat-label">Unmatched</div>
           <div class="stat-value" id="dsUnmatched" style="color:var(--red);">--</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">AI Matched</div>
-          <div class="stat-value" id="dsAIMatched" style="color:var(--blue);">--</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Needs Receipt</div>
@@ -1158,7 +1153,7 @@ function showResults(data) {
     statCard('Total New', m.total_new || 0, '') +
     statCard('Matched', m.matched || 0, 'color:var(--green)') +
     statCard('Unmatched', m.unmatched || 0, 'color:var(--red)') +
-    statCard('AI Matched', ai.ai_matched_count || 0, 'color:var(--blue)');
+    statCard('Needs Receipt', (data.needs_receipt || []).length || 0, 'color:var(--purple)');
 
   /* Match breakdown */
   var byMethod = m.by_method || {};
