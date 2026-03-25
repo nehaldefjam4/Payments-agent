@@ -62,11 +62,16 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 # Serve frontend
 # ---------------------------------------------------------------------------
-# v3.1 - cache bust
 @app.get("/", response_class=HTMLResponse)
 async def root():
-    from api._amit_html import AMIT_DASHBOARD_HTML
-    return HTMLResponse(content=AMIT_DASHBOARD_HTML, headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+    # Read HTML file directly to avoid Python module caching issues
+    import importlib
+    import api._amit_html as _html_mod
+    importlib.reload(_html_mod)
+    return HTMLResponse(
+        content=_html_mod.AMIT_DASHBOARD_HTML,
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"}
+    )
 
 
 # ---------------------------------------------------------------------------
