@@ -1,0 +1,1785 @@
+AMIT_DASHBOARD_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payments Agent | fam Master Agency</title>
+<style>
+/* ================================================================
+   CSS VARIABLES & RESET
+   ================================================================ */
+:root {
+  --bg: #0a0a0a;
+  --bg-card: #141414;
+  --bg-card-hover: #1a1a1a;
+  --bg-input: #1e1e1e;
+  --bg-nav: #000000;
+  --border: #2a2a2a;
+  --border-light: #333;
+  --text: #e5e5e5;
+  --text-muted: #888;
+  --text-dim: #555;
+  --red: #d51f2a;
+  --red-hover: #e8333e;
+  --red-dim: rgba(213,31,42,0.15);
+  --green: #22c55e;
+  --green-dim: rgba(34,197,94,0.12);
+  --amber: #f59e0b;
+  --amber-dim: rgba(245,158,11,0.12);
+  --blue: #3b82f6;
+  --blue-dim: rgba(59,130,246,0.12);
+  --purple: #a855f7;
+  --purple-dim: rgba(168,85,247,0.12);
+  --radius: 8px;
+  --radius-lg: 12px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+  --transition: 0.2s ease;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 14px; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ================================================================
+   SCROLLBAR
+   ================================================================ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #555; }
+
+/* ================================================================
+   TOP NAV
+   ================================================================ */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: var(--bg-nav);
+  border-bottom: 1px solid var(--border);
+  height: 56px;
+  display: flex; align-items: center; padding: 0 20px;
+  gap: 16px;
+}
+
+.nav-logo {
+  font-size: 1.4rem; font-weight: 800; letter-spacing: -0.5px;
+  display: flex; align-items: center; gap: 2px;
+  user-select: none;
+}
+.nav-logo .f { color: var(--red); }
+.nav-logo .am { color: #fff; }
+
+.nav-sep { width: 1px; height: 24px; background: var(--border); }
+
+.nav-title {
+  font-size: 0.82rem; font-weight: 600; color: var(--text-muted);
+  letter-spacing: 1.5px; text-transform: uppercase;
+}
+
+.nav-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+.nav-select {
+  background: var(--bg-input); color: var(--text); border: 1px solid var(--border);
+  padding: 6px 12px; border-radius: var(--radius); font-size: 0.85rem;
+  cursor: pointer; outline: none; font-family: var(--font);
+}
+.nav-select:focus { border-color: var(--red); }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 100px; font-size: 0.72rem;
+  font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+  white-space: nowrap;
+}
+.badge-green { background: var(--green-dim); color: var(--green); }
+.badge-amber { background: var(--amber-dim); color: var(--amber); }
+.badge-red { background: var(--red-dim); color: var(--red); }
+.badge-blue { background: var(--blue-dim); color: var(--blue); }
+.badge-dim { background: rgba(255,255,255,0.06); color: var(--text-muted); }
+.badge-dot {
+  width: 6px; height: 6px; border-radius: 50%; display: inline-block;
+}
+.badge-dot-green { background: var(--green); }
+.badge-dot-amber { background: var(--amber); }
+.badge-dot-red { background: var(--red); }
+
+/* ================================================================
+   MAIN LAYOUT
+   ================================================================ */
+.main { padding-top: 56px; min-height: 100vh; }
+
+/* ================================================================
+   TABS
+   ================================================================ */
+.tab-bar {
+  display: flex; gap: 0; border-bottom: 1px solid var(--border);
+  background: var(--bg-nav); padding: 0 20px;
+  overflow-x: auto;
+}
+.tab-btn {
+  background: none; border: none; color: var(--text-muted);
+  padding: 14px 20px; font-size: 0.85rem; font-weight: 500;
+  cursor: pointer; position: relative; white-space: nowrap;
+  font-family: var(--font); transition: color var(--transition);
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: #fff; }
+.tab-btn.active::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+  height: 2px; background: var(--red);
+}
+.tab-btn .tab-count {
+  background: rgba(255,255,255,0.08); color: var(--text-muted);
+  padding: 1px 7px; border-radius: 100px; font-size: 0.7rem;
+  margin-left: 6px; font-weight: 600;
+}
+
+.tab-panel { display: none; padding: 24px 20px; max-width: 1400px; margin: 0 auto; }
+.tab-panel.active { display: block; }
+
+/* ================================================================
+   CARDS & CONTAINERS
+   ================================================================ */
+.card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 20px;
+  transition: border-color var(--transition);
+}
+.card:hover { border-color: var(--border-light); }
+
+.card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.card-title {
+  font-size: 0.92rem; font-weight: 600; color: #fff;
+}
+.card-subtitle {
+  font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;
+}
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+
+@media (max-width: 900px) {
+  .grid-2, .grid-3, .grid-4, .grid-5 { grid-template-columns: 1fr; }
+}
+@media (min-width: 901px) and (max-width: 1100px) {
+  .grid-4, .grid-5 { grid-template-columns: repeat(3, 1fr); }
+}
+
+.section { margin-bottom: 24px; }
+.section-title {
+  font-size: 0.78rem; font-weight: 600; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;
+}
+
+/* ================================================================
+   STAT CARDS
+   ================================================================ */
+.stat-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 20px;
+}
+.stat-label {
+  font-size: 0.75rem; color: var(--text-muted); font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
+}
+.stat-value {
+  font-size: 2rem; font-weight: 700; color: #fff; line-height: 1;
+}
+.stat-sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 6px; }
+
+/* ================================================================
+   BUTTONS
+   ================================================================ */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 20px; border-radius: var(--radius); font-size: 0.85rem;
+  font-weight: 600; border: none; cursor: pointer; font-family: var(--font);
+  transition: all var(--transition); white-space: nowrap;
+}
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-primary {
+  background: var(--red); color: #fff;
+}
+.btn-primary:hover:not(:disabled) { background: var(--red-hover); transform: translateY(-1px); }
+
+.btn-secondary {
+  background: rgba(255,255,255,0.06); color: var(--text); border: 1px solid var(--border);
+}
+.btn-secondary:hover:not(:disabled) { background: rgba(255,255,255,0.1); }
+
+.btn-ghost {
+  background: transparent; color: var(--text-muted); padding: 6px 12px;
+}
+.btn-ghost:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+.btn-ghost.active { color: #fff; background: rgba(255,255,255,0.08); }
+
+.btn-big {
+  padding: 14px 36px; font-size: 1rem; border-radius: var(--radius-lg);
+}
+
+.btn-icon {
+  width: 36px; height: 36px; padding: 0; border-radius: var(--radius);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+
+.btn-success {
+  background: var(--green); color: #fff;
+}
+.btn-success:hover:not(:disabled) { background: #16a34a; transform: translateY(-1px); }
+
+/* ================================================================
+   DROP ZONES
+   ================================================================ */
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-lg);
+  padding: 40px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition);
+  position: relative;
+  background: var(--bg-card);
+}
+.drop-zone:hover, .drop-zone.dragover {
+  border-color: var(--red);
+  background: var(--red-dim);
+}
+.drop-zone.has-file {
+  border-color: var(--green);
+  border-style: solid;
+  background: var(--green-dim);
+}
+.drop-zone-icon {
+  font-size: 2rem; margin-bottom: 12px; opacity: 0.5;
+}
+.drop-zone-title {
+  font-size: 0.92rem; font-weight: 600; color: #fff; margin-bottom: 4px;
+}
+.drop-zone-sub {
+  font-size: 0.78rem; color: var(--text-muted);
+}
+.drop-zone-file {
+  margin-top: 10px; font-size: 0.82rem; color: var(--green); font-weight: 600;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.drop-zone input[type="file"] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer;
+}
+
+/* ================================================================
+   AGENT STEPS TIMELINE
+   ================================================================ */
+.timeline { position: relative; padding-left: 28px; }
+.timeline::before {
+  content: ''; position: absolute; left: 9px; top: 4px; bottom: 4px;
+  width: 2px; background: var(--border);
+}
+.step {
+  position: relative; margin-bottom: 16px;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: all 0.3s ease;
+}
+.step-dot {
+  position: absolute; left: -23px; top: 16px;
+  width: 12px; height: 12px; border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--bg);
+  transition: all 0.3s ease;
+  z-index: 1;
+}
+.step.done .step-dot { background: var(--green); border-color: var(--green); }
+.step.running .step-dot { background: var(--amber); border-color: var(--amber); animation: pulse 1.2s infinite; }
+.step.skipped .step-dot { background: var(--text-muted); border-color: var(--text-muted); }
+.step.pending .step-dot { background: var(--bg); border-color: var(--border); }
+
+.step.done { border-color: rgba(34,197,94,0.2); }
+.step.running { border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.04); }
+
+.step-num {
+  font-size: 0.7rem; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;
+}
+.step-text { font-size: 0.85rem; color: var(--text); }
+.step.done .step-text { color: var(--green); }
+.step.running .step-text { color: var(--amber); }
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(245,158,11,0); }
+}
+
+/* ================================================================
+   TABLES
+   ================================================================ */
+.table-wrap {
+  overflow-x: auto; border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+table {
+  width: 100%; border-collapse: collapse; font-size: 0.82rem;
+}
+thead th {
+  background: rgba(255,255,255,0.03);
+  padding: 10px 14px; text-align: left;
+  font-weight: 600; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.72rem;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer; user-select: none; white-space: nowrap;
+}
+thead th:hover { color: var(--text); }
+thead th.sorted-asc::after { content: ' \\2191'; }
+thead th.sorted-desc::after { content: ' \\2193'; }
+
+tbody td {
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+tbody tr { transition: background var(--transition); }
+tbody tr:hover { background: rgba(255,255,255,0.02); }
+tbody tr:last-child td { border-bottom: none; }
+
+.row-matched { background: rgba(34,197,94,0.04); }
+.row-unmatched { background: rgba(239,68,68,0.04); }
+.row-ai_matched { background: rgba(59,130,246,0.04); }
+.row-review { background: rgba(245,158,11,0.04); }
+
+/* Confidence bar */
+.conf-bar {
+  display: flex; align-items: center; gap: 8px;
+}
+.conf-track {
+  flex: 1; height: 6px; background: var(--border); border-radius: 3px;
+  overflow: hidden; min-width: 60px;
+}
+.conf-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+.conf-fill.high { background: var(--green); }
+.conf-fill.mid { background: var(--amber); }
+.conf-fill.low { background: var(--red); }
+.conf-pct { font-size: 0.75rem; font-weight: 600; min-width: 36px; text-align: right; }
+
+/* AI reasoning expandable */
+.ai-reasoning-toggle {
+  background: none; border: 1px solid var(--blue); color: var(--blue);
+  padding: 2px 8px; border-radius: 4px; font-size: 0.72rem;
+  cursor: pointer; font-family: var(--font); margin-top: 4px;
+}
+.ai-reasoning-toggle:hover { background: var(--blue-dim); }
+.ai-reasoning-panel {
+  display: none; margin-top: 8px; padding: 10px 14px;
+  background: var(--blue-dim); border-radius: var(--radius);
+  font-size: 0.8rem; color: var(--text); line-height: 1.6;
+  border-left: 3px solid var(--blue);
+}
+.ai-reasoning-panel.open { display: block; }
+
+/* ================================================================
+   FILTER BUTTONS
+   ================================================================ */
+.filter-bar {
+  display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px;
+}
+
+/* ================================================================
+   SF TAB
+   ================================================================ */
+.sf-status-card {
+  display: flex; align-items: center; gap: 16px; padding: 20px;
+}
+.sf-status-icon {
+  width: 48px; height: 48px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem;
+}
+.sf-status-icon.connected { background: var(--green-dim); }
+.sf-status-icon.disconnected { background: var(--red-dim); }
+
+.sf-badges {
+  display: flex; gap: 8px; flex-wrap: wrap;
+}
+
+.sf-lookup-input {
+  background: var(--bg-input); border: 1px solid var(--border);
+  color: var(--text); padding: 10px 14px; border-radius: var(--radius);
+  font-size: 0.9rem; width: 100%; font-family: var(--font);
+  outline: none; transition: border-color var(--transition);
+}
+.sf-lookup-input:focus { border-color: var(--red); }
+
+.sf-action-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+  font-size: 0.82rem;
+}
+.sf-action-item:last-child { border-bottom: none; }
+.sf-action-icon {
+  width: 28px; height: 28px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.8rem; flex-shrink: 0;
+}
+.sf-action-icon.write { background: var(--amber-dim); color: var(--amber); }
+.sf-action-icon.read { background: var(--blue-dim); color: var(--blue); }
+.sf-action-icon.skip { background: rgba(255,255,255,0.04); color: var(--text-muted); }
+
+/* SF Setup Form */
+.sf-form-group {
+  margin-bottom: 14px;
+}
+.sf-form-label {
+  display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;
+}
+.sf-form-input {
+  background: var(--bg-input); border: 1px solid var(--border);
+  color: var(--text); padding: 10px 14px; border-radius: var(--radius);
+  font-size: 0.85rem; width: 100%; font-family: var(--font);
+  outline: none; transition: border-color var(--transition);
+}
+.sf-form-input:focus { border-color: var(--red); }
+.sf-form-input::placeholder { color: var(--text-dim); }
+
+.sf-setup-status {
+  margin-top: 14px; padding: 12px 16px;
+  border-radius: var(--radius); font-size: 0.82rem;
+  display: none;
+}
+.sf-setup-status.success {
+  display: block; background: var(--green-dim); color: var(--green);
+  border: 1px solid rgba(34,197,94,0.2);
+}
+.sf-setup-status.error {
+  display: block; background: var(--red-dim); color: var(--red);
+  border: 1px solid rgba(213,31,42,0.2);
+}
+.sf-setup-status.info {
+  display: block; background: var(--blue-dim); color: var(--blue);
+  border: 1px solid rgba(59,130,246,0.2);
+}
+
+/* ================================================================
+   DASHBOARD TAB - CHARTS
+   ================================================================ */
+.chart-container {
+  display: flex; gap: 24px; flex-wrap: wrap;
+}
+.bar-chart {
+  flex: 1; min-width: 280px;
+}
+.bar-row {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 10px;
+}
+.bar-label {
+  width: 140px; font-size: 0.8rem; color: var(--text-muted); text-align: right;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.bar-track {
+  flex: 1; height: 24px; background: var(--border); border-radius: 4px;
+  overflow: hidden; position: relative;
+}
+.bar-fill {
+  height: 100%; border-radius: 4px; transition: width 0.6s ease;
+  display: flex; align-items: center; padding-left: 8px;
+  font-size: 0.72rem; font-weight: 700; color: #fff; min-width: fit-content;
+}
+.bar-fill.unit { background: var(--green); }
+.bar-fill.name { background: var(--blue); }
+.bar-fill.fuzzy { background: var(--purple); }
+.bar-fill.ai { background: var(--amber); }
+
+/* ================================================================
+   TOAST / NOTIFICATIONS
+   ================================================================ */
+.toast-container {
+  position: fixed; bottom: 20px; right: 20px; z-index: 1000;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.toast {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 16px;
+  font-size: 0.82rem; box-shadow: var(--shadow-lg);
+  display: flex; align-items: center; gap: 8px;
+  animation: slideIn 0.3s ease;
+  max-width: 360px;
+}
+.toast.error { border-color: var(--red); }
+.toast.success { border-color: var(--green); }
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* ================================================================
+   LOADING SPINNER
+   ================================================================ */
+.spinner {
+  width: 18px; height: 18px;
+  border: 2px solid var(--border);
+  border-top-color: var(--red);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ================================================================
+   EMPTY STATE
+   ================================================================ */
+.empty-state {
+  text-align: center; padding: 60px 20px; color: var(--text-muted);
+}
+.empty-state-icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.3; }
+.empty-state-text { font-size: 0.9rem; }
+
+/* ================================================================
+   UNIT LOOKUP RESULT
+   ================================================================ */
+.unit-result {
+  margin-top: 16px;
+}
+.unit-header {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+}
+.unit-name { font-size: 1.1rem; font-weight: 700; color: #fff; }
+
+.payment-row {
+  display: flex; align-items: center; gap: 12px; padding: 8px 12px;
+  border-bottom: 1px solid var(--border); font-size: 0.82rem;
+}
+.payment-row:last-child { border-bottom: none; }
+.payment-type { width: 160px; font-weight: 600; }
+.payment-amount { width: 100px; text-align: right; font-weight: 600; }
+.payment-status { width: 80px; }
+
+/* ================================================================
+   FOOTER
+   ================================================================ */
+.site-footer {
+  text-align: center; padding: 20px; margin-top: 40px;
+  border-top: 1px solid var(--border);
+  font-size: 0.75rem; color: var(--text-dim);
+}
+
+/* ================================================================
+   RESPONSIVE
+   ================================================================ */
+@media (max-width: 768px) {
+  .nav { padding: 0 12px; gap: 10px; }
+  .nav-title { display: none; }
+  .tab-panel { padding: 16px 12px; }
+  .grid-2 { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     NAV BAR
+     ============================================================ -->
+<nav class="nav">
+  <div class="nav-logo">
+    <span class="f">f</span><span class="am">am</span>
+  </div>
+  <div class="nav-sep"></div>
+  <div class="nav-title">PAYMENTS AGENT v3</div>
+
+  <div class="nav-right">
+    <select id="navProjectSelect" class="nav-select">
+      <option value="auto">Auto-Detect</option>
+    </select>
+
+    <span class="badge badge-dim" id="badgeSF">
+      <span class="badge-dot" id="badgeSFDot"></span> SF
+    </span>
+    <span class="badge badge-dim" id="badgeAI">
+      <span class="badge-dot" id="badgeAIDot"></span> AI
+    </span>
+    <span class="badge badge-dim" id="badgeWriteMode">
+      <span class="badge-dot" id="badgeWriteDot"></span> DRY RUN
+    </span>
+  </div>
+</nav>
+
+<!-- ============================================================
+     MAIN
+     ============================================================ -->
+<div class="main">
+
+  <!-- TAB BAR -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="upload" onclick="switchTab('upload')">
+      Upload &amp; Reconcile
+    </button>
+    <button class="tab-btn" data-tab="transactions" onclick="switchTab('transactions')">
+      Transactions <span class="tab-count" id="txCountBadge">0</span>
+    </button>
+    <button class="tab-btn" data-tab="salesforce" onclick="switchTab('salesforce')">
+      Salesforce
+    </button>
+    <button class="tab-btn" data-tab="dashboard" onclick="switchTab('dashboard')">
+      Dashboard
+    </button>
+  </div>
+
+  <!-- ========================================================
+       TAB 1: UPLOAD & RECONCILE
+       ======================================================== -->
+  <div class="tab-panel active" id="tab-upload">
+
+    <div class="section">
+      <div class="section-title">Upload Documents</div>
+      <div class="grid-2">
+        <!-- Drop Zone 1: Master Sheet -->
+        <div class="drop-zone" id="dropMaster" onclick="document.getElementById('fileMaster').click()">
+          <div class="drop-zone-icon">&#128196;</div>
+          <div class="drop-zone-title">Master Sheet</div>
+          <div class="drop-zone-sub">Upload your master Excel sheet</div>
+          <div class="drop-zone-file" id="fileMasterName" style="display:none"></div>
+          <input type="file" id="fileMaster" accept=".xlsx,.xls,.csv" style="display:none">
+        </div>
+        <!-- Drop Zone 2: Bank Statement -->
+        <div class="drop-zone" id="dropBank" onclick="document.getElementById('fileBank').click()">
+          <div class="drop-zone-icon">&#127974;</div>
+          <div class="drop-zone-title">Bank Statement</div>
+          <div class="drop-zone-sub">Escrow or corporate account PDF / CSV</div>
+          <div class="drop-zone-file" id="fileBankName" style="display:none"></div>
+          <input type="file" id="fileBank" accept=".pdf,.csv,.xlsx,.xls" style="display:none">
+        </div>
+      </div>
+    </div>
+
+    <!-- Project selector + Run button -->
+    <div class="section" style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+      <select id="projectSelect" class="nav-select" style="min-width:180px;">
+        <option value="auto">Auto-detect Project</option>
+      </select>
+      <button class="btn btn-primary btn-big" id="btnRunAgent" onclick="runAgent()" disabled>
+        &#9654; Run Agent
+      </button>
+      <div id="runStatus" style="font-size:0.82rem; color:var(--text-muted);"></div>
+    </div>
+
+    <!-- Agent Steps Timeline -->
+    <div class="section" id="stepsSection" style="display:none;">
+      <div class="section-title">Agent Steps</div>
+      <div class="timeline" id="stepsTimeline"></div>
+    </div>
+
+    <!-- Results Panel -->
+    <div class="section" id="resultsSection" style="display:none;">
+      <div class="section-title">Results Summary</div>
+      <div class="grid-4" id="resultCards"></div>
+
+      <div style="margin-top:16px;">
+        <div class="card" id="resultsMatchBreakdown" style="display:none;">
+          <div class="card-header">
+            <div class="card-title">Match Method Breakdown</div>
+          </div>
+          <div id="matchBreakdownBars"></div>
+        </div>
+      </div>
+
+      <!-- Download Master Sheet Button -->
+      <div id="downloadMasterSection" style="display:none; margin-top:16px;">
+        <button class="btn btn-success btn-big" id="btnDownloadMaster" onclick="downloadMasterSheet()">
+          &#128229; Download Updated Master Sheet
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       TAB 2: TRANSACTIONS
+       ======================================================== -->
+  <div class="tab-panel" id="tab-transactions">
+    <div class="filter-bar" id="txFilterBar">
+      <button class="btn btn-ghost active" data-filter="all" onclick="filterTx('all')">All</button>
+      <button class="btn btn-ghost" data-filter="matched" onclick="filterTx('matched')">Matched</button>
+      <button class="btn btn-ghost" data-filter="unmatched" onclick="filterTx('unmatched')">Unmatched</button>
+      <button class="btn btn-ghost" data-filter="ai_matched" onclick="filterTx('ai_matched')">AI Matched</button>
+      <button class="btn btn-ghost" data-filter="review" onclick="filterTx('review')">Needs Review</button>
+    </div>
+
+    <div id="txTableContainer">
+      <div class="empty-state">
+        <div class="empty-state-icon">&#128203;</div>
+        <div class="empty-state-text">Run the agent to see transactions</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       TAB 3: SALESFORCE
+       ======================================================== -->
+  <div class="tab-panel" id="tab-salesforce">
+    <div class="grid-2" style="margin-bottom:24px;">
+      <!-- SF Connection Status -->
+      <div class="card">
+        <div class="sf-status-card">
+          <div class="sf-status-icon disconnected" id="sfStatusIcon">&#9729;</div>
+          <div>
+            <div style="font-weight:600; color:#fff;" id="sfStatusText">Checking connection...</div>
+            <div style="font-size:0.78rem; color:var(--text-muted);" id="sfStatusSub">Salesforce integration</div>
+          </div>
+        </div>
+      </div>
+      <!-- Safety Badges -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Safety Controls</div>
+        </div>
+        <div class="sf-badges" id="sfSafetyBadges">
+          <span class="badge badge-amber" id="sfWriteBadge">SF WRITE: DRY RUN</span>
+          <span class="badge badge-amber" id="sfEmailBadge">EMAIL: DRY RUN</span>
+        </div>
+        <div style="margin-top:12px; font-size:0.78rem; color:var(--text-muted);">
+          All Salesforce writes and emails are disabled by default. Set SF_WRITE_MODE=true and EMAIL_LIVE_MODE=true in environment to enable.
+        </div>
+      </div>
+    </div>
+
+    <!-- Salesforce Connection Setup -->
+    <div class="section">
+      <div class="section-title">Connection Setup</div>
+      <div class="card" id="sfSetupCard">
+        <div class="card-header">
+          <div class="card-title">Salesforce Connection Setup</div>
+        </div>
+        <div class="grid-2">
+          <div class="sf-form-group">
+            <label class="sf-form-label" for="sfUsername">Username</label>
+            <input type="text" class="sf-form-input" id="sfUsername" placeholder="user@company.com" autocomplete="off">
+          </div>
+          <div class="sf-form-group">
+            <label class="sf-form-label" for="sfPassword">Password</label>
+            <input type="password" class="sf-form-input" id="sfPassword" placeholder="Salesforce password" autocomplete="off">
+          </div>
+          <div class="sf-form-group">
+            <label class="sf-form-label" for="sfSecurityToken">Security Token</label>
+            <input type="text" class="sf-form-input" id="sfSecurityToken" placeholder="Your SF security token" autocomplete="off">
+          </div>
+          <div class="sf-form-group">
+            <label class="sf-form-label" for="sfClientId">Client ID</label>
+            <input type="text" class="sf-form-input" id="sfClientId" placeholder="Connected App consumer key" autocomplete="off">
+          </div>
+          <div class="sf-form-group">
+            <label class="sf-form-label" for="sfClientSecret">Client Secret</label>
+            <input type="password" class="sf-form-input" id="sfClientSecret" placeholder="Connected App consumer secret" autocomplete="off">
+          </div>
+          <div class="sf-form-group">
+            <label class="sf-form-label" for="sfInstanceUrl">Instance URL</label>
+            <input type="text" class="sf-form-input" id="sfInstanceUrl" placeholder="momentum-ability-3447.my.salesforce.com" value="momentum-ability-3447.my.salesforce.com" autocomplete="off">
+          </div>
+        </div>
+        <div style="margin-top:16px; display:flex; align-items:center; gap:12px;">
+          <button class="btn btn-primary" id="btnSfSave" onclick="saveSalesforceSettings()">
+            Save &amp; Connect
+          </button>
+          <span id="sfSaveSpinner" style="display:none;"><span class="spinner"></span></span>
+        </div>
+        <div class="sf-setup-status" id="sfSetupStatus"></div>
+      </div>
+    </div>
+
+    <!-- Unit Lookup -->
+    <div class="section">
+      <div class="section-title">Unit Lookup</div>
+      <div class="card">
+        <div style="display:flex; gap:10px; align-items:center;">
+          <input type="text" class="sf-lookup-input" id="sfUnitInput"
+                 placeholder="Enter unit number (e.g. C-1201)" style="max-width:300px;"
+                 onkeydown="if(event.key==='Enter') lookupUnit()">
+          <button class="btn btn-primary" onclick="lookupUnit()">Lookup</button>
+        </div>
+        <div id="sfUnitResult"></div>
+      </div>
+    </div>
+
+    <!-- SF Actions Log -->
+    <div class="section">
+      <div class="section-title">Salesforce Actions Log</div>
+      <div class="card">
+        <div id="sfActionsLog">
+          <div class="empty-state" style="padding:30px;">
+            <div class="empty-state-text">No Salesforce actions yet. Run the agent to see SF sync results.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       TAB 4: DASHBOARD
+       ======================================================== -->
+  <div class="tab-panel" id="tab-dashboard">
+    <div class="section">
+      <div class="section-title">Overview</div>
+      <div class="grid-5" id="dashboardStats">
+        <div class="stat-card">
+          <div class="stat-label">Total Transactions</div>
+          <div class="stat-value" id="dsTotalTx">--</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Matched</div>
+          <div class="stat-value" id="dsMatched" style="color:var(--green);">--</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Unmatched</div>
+          <div class="stat-value" id="dsUnmatched" style="color:var(--red);">--</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">AI Matched</div>
+          <div class="stat-value" id="dsAIMatched" style="color:var(--blue);">--</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Receipts Generated</div>
+          <div class="stat-value" id="dsReceipts" style="color:var(--purple);">--</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Match Method Breakdown</div>
+      <div class="card">
+        <div class="chart-container">
+          <div class="bar-chart" id="dashMethodChart">
+            <div class="empty-state" style="padding:30px;">
+              <div class="empty-state-text">Run the agent to see match breakdown</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Unreconciled Summary</div>
+      <div class="card" id="dashUnreconciled">
+        <div class="empty-state" style="padding:30px;">
+          <div class="empty-state-text">No unreconciled data available</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- Footer -->
+<footer class="site-footer">
+  &copy; 2024 fam Master Agency | Payments Agent v3
+</footer>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ============================================================
+     JAVASCRIPT
+     ============================================================ -->
+<script>
+/* ================================================================
+   STATE
+   ================================================================ */
+var STATE = {
+  masterFile: null,
+  bankFile: null,
+  result: null,
+  allTransactions: [],
+  sfActions: [],
+  health: null,
+  currentFilter: 'all',
+  sortCol: null,
+  sortDir: 'asc'
+};
+
+/* ================================================================
+   TAB SWITCHING
+   ================================================================ */
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelector('[data-tab="' + tab + '"]').classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+/* ================================================================
+   TOAST NOTIFICATIONS
+   ================================================================ */
+function showToast(msg, type) {
+  type = type || 'info';
+  var c = document.getElementById('toastContainer');
+  var t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(function() {
+    t.style.opacity = '0';
+    t.style.transform = 'translateX(100%)';
+    setTimeout(function() { t.remove(); }, 300);
+  }, 4000);
+}
+
+/* ================================================================
+   FILE HANDLING
+   ================================================================ */
+function setupDropZone(zoneId, inputId, nameId, fileKey) {
+  var zone = document.getElementById(zoneId);
+  var input = document.getElementById(inputId);
+  var nameEl = document.getElementById(nameId);
+
+  zone.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    zone.classList.add('dragover');
+  });
+  zone.addEventListener('dragleave', function() {
+    zone.classList.remove('dragover');
+  });
+  zone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) {
+      handleFile(e.dataTransfer.files[0], zone, nameEl, fileKey);
+    }
+  });
+  input.addEventListener('change', function() {
+    if (input.files.length) {
+      handleFile(input.files[0], zone, nameEl, fileKey);
+    }
+  });
+}
+
+function handleFile(file, zone, nameEl, fileKey) {
+  STATE[fileKey] = file;
+  zone.classList.add('has-file');
+  nameEl.style.display = 'flex';
+  nameEl.innerHTML = '&#10003; ' + escHtml(file.name) + ' (' + formatSize(file.size) + ')';
+  updateRunButton();
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
+function updateRunButton() {
+  document.getElementById('btnRunAgent').disabled = !STATE.masterFile;
+}
+
+/* ================================================================
+   RUN AGENT
+   ================================================================ */
+function runAgent() {
+  if (!STATE.masterFile) return;
+
+  var btn = document.getElementById('btnRunAgent');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Agent Running...';
+  document.getElementById('runStatus').textContent = 'Processing...';
+
+  /* Show steps section */
+  document.getElementById('stepsSection').style.display = 'block';
+  document.getElementById('resultsSection').style.display = 'none';
+  document.getElementById('downloadMasterSection').style.display = 'none';
+  initSteps();
+
+  var fd = new FormData();
+  fd.append('master_file', STATE.masterFile);
+  if (STATE.bankFile) fd.append('escrow_file', STATE.bankFile);
+
+  var project = document.getElementById('projectSelect').value;
+  fd.append('project', project);
+
+  fetch('/api/reconcile', { method: 'POST', body: fd })
+    .then(function(r) {
+      if (!r.ok) throw new Error('Server error: ' + r.status);
+      return r.json();
+    })
+    .then(function(data) {
+      STATE.result = data;
+      processResult(data);
+      btn.innerHTML = '&#9654; Run Agent';
+      btn.disabled = false;
+      document.getElementById('runStatus').textContent = 'Complete';
+      showToast('Reconciliation complete!', 'success');
+    })
+    .catch(function(err) {
+      btn.innerHTML = '&#9654; Run Agent';
+      btn.disabled = false;
+      document.getElementById('runStatus').textContent = 'Error: ' + err.message;
+      showToast('Error: ' + err.message, 'error');
+    });
+}
+
+/* ================================================================
+   AGENT STEPS ANIMATION
+   ================================================================ */
+var STEP_LABELS = [
+  'Receiving uploaded documents',
+  'Building knowledge base from master sheet',
+  'Parsing bank statements & rule-based matching',
+  'Claude AI analysis for unmatched transactions',
+  'Salesforce sync & installment matching',
+  'Updating master sheet with matched data',
+  'Generating payment receipts'
+];
+
+function initSteps() {
+  var tl = document.getElementById('stepsTimeline');
+  tl.innerHTML = '';
+  for (var i = 0; i < STEP_LABELS.length; i++) {
+    var s = document.createElement('div');
+    s.className = 'step pending';
+    s.id = 'step-' + (i + 1);
+    s.innerHTML =
+      '<div class="step-dot"></div>' +
+      '<div class="step-num">Step ' + (i + 1) + '</div>' +
+      '<div class="step-text">' + STEP_LABELS[i] + '</div>';
+    tl.appendChild(s);
+  }
+  /* Animate first step immediately */
+  animateStep(1);
+}
+
+function animateStep(n) {
+  if (n > STEP_LABELS.length) return;
+  var el = document.getElementById('step-' + n);
+  if (el) el.className = 'step running';
+}
+
+function completeStep(n, text) {
+  var el = document.getElementById('step-' + n);
+  if (el) {
+    el.className = 'step done';
+    if (text) el.querySelector('.step-text').textContent = text;
+  }
+}
+
+function skipStep(n, text) {
+  var el = document.getElementById('step-' + n);
+  if (el) {
+    el.className = 'step skipped';
+    if (text) el.querySelector('.step-text').textContent = text;
+  }
+}
+
+/* ================================================================
+   PROCESS RESULT
+   ================================================================ */
+function processResult(data) {
+  var steps = data.agent_steps || [];
+  var delay = 0;
+
+  steps.forEach(function(s, i) {
+    setTimeout(function() {
+      if (s.status === 'done') {
+        completeStep(s.step, s.action);
+      } else if (s.status === 'skipped') {
+        skipStep(s.step, s.action);
+      }
+      /* Start next step animation */
+      if (i + 1 < steps.length) {
+        animateStep(steps[i + 1].step);
+      }
+    }, delay);
+    delay += 300;
+  });
+
+  /* After animations, populate panels */
+  setTimeout(function() {
+    showResults(data);
+    buildTransactions(data);
+    buildSFActions(data);
+    updateDashboard(data);
+
+    /* Show download button if master sheet base64 is available */
+    if (data.download && data.download.master_sheet_base64) {
+      document.getElementById('downloadMasterSection').style.display = 'block';
+    }
+  }, delay + 200);
+}
+
+/* ================================================================
+   RESULTS PANEL
+   ================================================================ */
+function showResults(data) {
+  document.getElementById('resultsSection').style.display = 'block';
+  var m = data.matching || {};
+  var ai = data.ai_matching || {};
+
+  var cards = document.getElementById('resultCards');
+  cards.innerHTML =
+    statCard('Total New', m.total_new || 0, '') +
+    statCard('Matched', m.matched || 0, 'color:var(--green)') +
+    statCard('Unmatched', m.unmatched || 0, 'color:var(--red)') +
+    statCard('AI Matched', ai.ai_matched_count || 0, 'color:var(--blue)');
+
+  /* Match breakdown */
+  var byMethod = m.by_method || {};
+  var keys = Object.keys(byMethod);
+  if (keys.length > 0) {
+    document.getElementById('resultsMatchBreakdown').style.display = 'block';
+    renderMethodBars('matchBreakdownBars', byMethod, m.total_new || 1);
+  }
+}
+
+function statCard(label, value, style) {
+  return '<div class="stat-card"><div class="stat-label">' + label + '</div>' +
+    '<div class="stat-value" style="' + (style || '') + '">' + value + '</div></div>';
+}
+
+function renderMethodBars(containerId, byMethod, total) {
+  var el = document.getElementById(containerId);
+  if (!total) total = 1;
+  var methodColors = {
+    'unit_in_narration': 'unit',
+    'name_from_kb': 'name',
+    'name_fuzzy': 'fuzzy',
+    'ai_match': 'ai'
+  };
+  var methodLabels = {
+    'unit_in_narration': 'Unit in Narration',
+    'name_from_kb': 'Name from KB',
+    'name_fuzzy': 'Fuzzy Name Match',
+    'ai_match': 'AI Match'
+  };
+  var html = '';
+  Object.keys(byMethod).forEach(function(k) {
+    var pct = Math.round((byMethod[k] / total) * 100);
+    var cls = methodColors[k] || 'unit';
+    var label = methodLabels[k] || k;
+    html +=
+      '<div class="bar-row">' +
+      '<div class="bar-label">' + label + '</div>' +
+      '<div class="bar-track"><div class="bar-fill ' + cls + '" style="width:' + Math.max(pct, 4) + '%">' + byMethod[k] + '</div></div>' +
+      '</div>';
+  });
+  el.innerHTML = html;
+}
+
+/* ================================================================
+   DOWNLOAD MASTER SHEET
+   ================================================================ */
+function downloadMasterSheet() {
+  if (!STATE.result || !STATE.result.download || !STATE.result.download.master_sheet_base64) {
+    showToast('No master sheet data available', 'error');
+    return;
+  }
+
+  var b64 = STATE.result.download.master_sheet_base64;
+  var filename = STATE.result.download.filename || 'Updated_Master_Sheet.xlsx';
+
+  try {
+    var byteChars = atob(b64);
+    var byteNumbers = new Array(byteChars.length);
+    for (var i = 0; i < byteChars.length; i++) {
+      byteNumbers[i] = byteChars.charCodeAt(i);
+    }
+    var byteArray = new Uint8Array(byteNumbers);
+    var blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showToast('Master sheet downloaded: ' + filename, 'success');
+  } catch (err) {
+    showToast('Download failed: ' + err.message, 'error');
+  }
+}
+
+/* ================================================================
+   BUILD TRANSACTIONS TABLE
+   ================================================================ */
+function buildTransactions(data) {
+  var txs = [];
+
+  /* Matched details */
+  (data.matched_details || []).forEach(function(t) {
+    t._status = 'matched';
+    t._method = t.match_method || t.method || 'unknown';
+    t._confidence = t.confidence != null ? t.confidence : 1.0;
+    if (t._method === 'ai_match') t._status = 'ai_matched';
+    txs.push(t);
+  });
+
+  /* Unmatched details */
+  (data.unmatched_details || []).forEach(function(t) {
+    t._status = 'unmatched';
+    t._method = '-';
+    t._confidence = 0;
+    txs.push(t);
+  });
+
+  /* AI matching results - augment existing */
+  var aiResults = (data.ai_matching && data.ai_matching.results) || [];
+  aiResults.forEach(function(r) {
+    if (!r.applied) return;
+    for (var i = 0; i < txs.length; i++) {
+      if (txs[i].narration === r.narration || txs[i].description === r.narration) {
+        txs[i]._status = 'ai_matched';
+        txs[i]._method = 'ai_match';
+        txs[i]._confidence = r.confidence || 0.8;
+        txs[i]._ai_reasoning = r.reasoning || '';
+        txs[i].unit_no = r.unit_no || txs[i].unit_no;
+        break;
+      }
+    }
+  });
+
+  /* Mark low confidence as review */
+  txs.forEach(function(t) {
+    if (t._confidence > 0 && t._confidence < 0.6 && t._status !== 'unmatched') {
+      t._status = 'review';
+    }
+  });
+
+  STATE.allTransactions = txs;
+  document.getElementById('txCountBadge').textContent = txs.length;
+  renderTransactions(txs);
+}
+
+function renderTransactions(txs) {
+  var container = document.getElementById('txTableContainer');
+  if (!txs.length) {
+    container.innerHTML =
+      '<div class="empty-state"><div class="empty-state-icon">&#128203;</div>' +
+      '<div class="empty-state-text">No transactions to display</div></div>';
+    return;
+  }
+
+  var html =
+    '<div class="table-wrap"><table>' +
+    '<thead><tr>' +
+    '<th onclick="sortTx(\'date\')">Date</th>' +
+    '<th onclick="sortTx(\'narration\')">Narration</th>' +
+    '<th onclick="sortTx(\'amount\')">Amount</th>' +
+    '<th onclick="sortTx(\'unit_no\')">Unit</th>' +
+    '<th onclick="sortTx(\'client\')">Client</th>' +
+    '<th onclick="sortTx(\'_confidence\')">Confidence</th>' +
+    '<th onclick="sortTx(\'_method\')">Method</th>' +
+    '<th onclick="sortTx(\'_status\')">Status</th>' +
+    '<th>SF Status</th>' +
+    '</tr></thead><tbody>';
+
+  txs.forEach(function(t, idx) {
+    var rowClass = 'row-' + (t._status || '');
+    var conf = Math.round((t._confidence || 0) * 100);
+    var confClass = conf >= 90 ? 'high' : (conf >= 60 ? 'mid' : 'low');
+    var narration = t.narration || t.description || '-';
+    var amount = t.amount ? formatAmount(t.amount) : '-';
+    var sfStatus = t.sf_status || '-';
+
+    html += '<tr class="' + rowClass + '">';
+    html += '<td>' + (t.date || t.value_date || '-') + '</td>';
+    html += '<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escHtml(narration) + '">' + escHtml(narration);
+
+    /* AI reasoning toggle */
+    if (t._ai_reasoning) {
+      html +=
+        '<br><button class="ai-reasoning-toggle" onclick="toggleReasoning(' + idx + ')">Show AI Reasoning</button>' +
+        '<div class="ai-reasoning-panel" id="aiReason-' + idx + '">' + escHtml(t._ai_reasoning) + '</div>';
+    }
+
+    html += '</td>';
+    html += '<td style="font-weight:600; font-variant-numeric:tabular-nums;">' + amount + '</td>';
+    html += '<td><span style="font-weight:600;color:#fff;">' + (t.unit_no || '-') + '</span></td>';
+    html += '<td>' + (t.client_name || t.client || '-') + '</td>';
+    html +=
+      '<td><div class="conf-bar">' +
+      '<div class="conf-track"><div class="conf-fill ' + confClass + '" style="width:' + conf + '%"></div></div>' +
+      '<span class="conf-pct">' + conf + '%</span></div></td>';
+    html += '<td><span class="badge badge-dim" style="font-size:0.68rem;">' + (t._method || '-') + '</span></td>';
+    html += '<td>' + statusBadge(t._status) + '</td>';
+    html += '<td>' + (sfStatus !== '-' ? '<span class="badge badge-dim">' + sfStatus + '</span>' : '-') + '</td>';
+    html += '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  container.innerHTML = html;
+}
+
+function statusBadge(status) {
+  var map = {
+    'matched': '<span class="badge badge-green">Matched</span>',
+    'unmatched': '<span class="badge badge-red">Unmatched</span>',
+    'ai_matched': '<span class="badge badge-blue">AI Matched</span>',
+    'review': '<span class="badge badge-amber">Review</span>'
+  };
+  return map[status] || '<span class="badge badge-dim">' + (status || '-') + '</span>';
+}
+
+function toggleReasoning(idx) {
+  var el = document.getElementById('aiReason-' + idx);
+  if (el) el.classList.toggle('open');
+}
+
+function formatAmount(n) {
+  if (typeof n === 'string') n = parseFloat(n);
+  if (isNaN(n)) return '-';
+  return 'AED ' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function escHtml(s) {
+  if (!s) return '';
+  var d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+/* ================================================================
+   FILTER & SORT TRANSACTIONS
+   ================================================================ */
+function filterTx(f) {
+  STATE.currentFilter = f;
+  document.querySelectorAll('#txFilterBar .btn-ghost').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-filter') === f);
+  });
+  var filtered;
+  if (f === 'all') {
+    filtered = STATE.allTransactions;
+  } else {
+    filtered = STATE.allTransactions.filter(function(t) { return t._status === f; });
+  }
+  renderTransactions(filtered);
+}
+
+function sortTx(col) {
+  if (STATE.sortCol === col) {
+    STATE.sortDir = STATE.sortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    STATE.sortCol = col;
+    STATE.sortDir = 'asc';
+  }
+
+  var txs = STATE.currentFilter === 'all'
+    ? STATE.allTransactions.slice()
+    : STATE.allTransactions.filter(function(t) { return t._status === STATE.currentFilter; });
+
+  txs.sort(function(a, b) {
+    var va = a[col] != null ? a[col] : '';
+    var vb = b[col] != null ? b[col] : '';
+    if (typeof va === 'number' && typeof vb === 'number') {
+      return STATE.sortDir === 'asc' ? va - vb : vb - va;
+    }
+    va = String(va).toLowerCase();
+    vb = String(vb).toLowerCase();
+    if (va < vb) return STATE.sortDir === 'asc' ? -1 : 1;
+    if (va > vb) return STATE.sortDir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  renderTransactions(txs);
+}
+
+/* ================================================================
+   SF ACTIONS LOG
+   ================================================================ */
+function buildSFActions(data) {
+  var sf = data.salesforce || {};
+  STATE.sfActions = sf.actions || [];
+  var log = document.getElementById('sfActionsLog');
+
+  /* Update safety badges */
+  if (sf.write_mode) {
+    document.getElementById('sfWriteBadge').className = 'badge badge-red';
+    document.getElementById('sfWriteBadge').textContent = 'SF WRITE: LIVE';
+  } else {
+    document.getElementById('sfWriteBadge').className = 'badge badge-amber';
+    document.getElementById('sfWriteBadge').textContent = 'SF WRITE: DRY RUN';
+  }
+  if (sf.email_live_mode) {
+    document.getElementById('sfEmailBadge').className = 'badge badge-red';
+    document.getElementById('sfEmailBadge').textContent = 'EMAIL: LIVE';
+  } else {
+    document.getElementById('sfEmailBadge').className = 'badge badge-amber';
+    document.getElementById('sfEmailBadge').textContent = 'EMAIL: DRY RUN';
+  }
+
+  if (!STATE.sfActions.length) {
+    log.innerHTML =
+      '<div class="empty-state" style="padding:30px;"><div class="empty-state-text">' +
+      (sf.status && sf.status.connected ? 'No SF actions were taken during this run.' : 'Salesforce not connected.') +
+      '</div></div>';
+    return;
+  }
+
+  var html = '';
+  STATE.sfActions.forEach(function(a) {
+    var iconCls = (a.action_type === 'write' || a.type === 'update') ? 'write' : ((a.type === 'skip' || a.action_type === 'skip') ? 'skip' : 'read');
+    var icon = iconCls === 'write' ? '&#9998;' : (iconCls === 'read' ? '&#128269;' : '&#8212;');
+    var detail = a.detail || a.description || a.message || '';
+    if (!detail && typeof a === 'object') {
+      var aClone = Object.assign({}, a);
+      delete aClone.unit; delete aClone.unit_name; delete aClone.action_type; delete aClone.type;
+      detail = JSON.stringify(aClone);
+    }
+    html +=
+      '<div class="sf-action-item">' +
+      '<div class="sf-action-icon ' + iconCls + '">' + icon + '</div>' +
+      '<div>' +
+      '<div style="font-weight:600; color:#fff;">' + escHtml(a.unit || a.unit_name || a.action || '-') + '</div>' +
+      '<div style="color:var(--text-muted);">' + escHtml(detail) + '</div>' +
+      (a.dry_run ? '<span class="badge badge-amber" style="margin-top:4px;">DRY RUN</span>' : '') +
+      '</div></div>';
+  });
+  log.innerHTML = html;
+}
+
+/* ================================================================
+   UNIT LOOKUP
+   ================================================================ */
+function lookupUnit() {
+  var unit = document.getElementById('sfUnitInput').value.trim();
+  if (!unit) return;
+  var resultEl = document.getElementById('sfUnitResult');
+  resultEl.innerHTML = '<div style="padding:16px;"><span class="spinner"></span> Looking up ' + escHtml(unit) + '...</div>';
+
+  var project = document.getElementById('navProjectSelect').value;
+  var url = '/api/salesforce/unit/' + encodeURIComponent(unit);
+  if (project && project !== 'auto') url += '?project=' + encodeURIComponent(project);
+
+  fetch(url)
+    .then(function(r) {
+      if (r.status === 404) throw new Error('Unit not found');
+      if (!r.ok) throw new Error('Server error: ' + r.status);
+      return r.json();
+    })
+    .then(function(data) {
+      renderUnitResult(resultEl, data);
+    })
+    .catch(function(err) {
+      resultEl.innerHTML = '<div style="padding:16px; color:var(--red);">Error: ' + escHtml(err.message) + '</div>';
+    });
+}
+
+function renderUnitResult(el, data) {
+  var u = data.unit || {};
+  var payments = data.payments || [];
+
+  var html =
+    '<div class="unit-result">' +
+    '<div class="unit-header">' +
+    '<div class="unit-name">' + escHtml(u.name || u.unit_name || '-') + '</div>' +
+    '<span class="badge badge-green">' + data.paid + ' Paid</span>' +
+    '<span class="badge badge-amber">' + data.unpaid + ' Unpaid</span>' +
+    '</div>';
+
+  if (data.total_remaining) {
+    html +=
+      '<div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:12px;">Remaining: ' +
+      '<strong style="color:var(--red);">' + formatAmount(data.total_remaining) + '</strong></div>';
+  }
+
+  if (payments.length) {
+    html +=
+      '<div class="table-wrap"><table><thead><tr>' +
+      '<th>Payment Name</th><th>Type</th><th>Amount</th><th>Paid</th><th>Remaining</th><th>Status</th><th>Due Date</th>' +
+      '</tr></thead><tbody>';
+
+    payments.forEach(function(p) {
+      var sBadge = p.status === 'Paid'
+        ? '<span class="badge badge-green">Paid</span>'
+        : '<span class="badge badge-amber">' + (p.status || 'Unpaid') + '</span>';
+      html +=
+        '<tr>' +
+        '<td>' + escHtml(p.name || '-') + '</td>' +
+        '<td>' + escHtml(p.payment_type || p.type || '-') + '</td>' +
+        '<td style="font-variant-numeric:tabular-nums;">' + formatAmount(p.amount || 0) + '</td>' +
+        '<td style="font-variant-numeric:tabular-nums;">' + formatAmount(p.paid || 0) + '</td>' +
+        '<td style="font-variant-numeric:tabular-nums; color:var(--red);">' + formatAmount(p.remaining || 0) + '</td>' +
+        '<td>' + sBadge + '</td>' +
+        '<td>' + (p.due_date || '-') + '</td>' +
+        '</tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+/* ================================================================
+   DASHBOARD TAB
+   ================================================================ */
+function updateDashboard(data) {
+  var m = data.matching || {};
+  var ai = data.ai_matching || {};
+  var receipts = data.receipts || [];
+
+  document.getElementById('dsTotalTx').textContent = m.total_new || 0;
+  document.getElementById('dsMatched').textContent = m.matched || 0;
+  document.getElementById('dsUnmatched').textContent = m.unmatched || 0;
+  document.getElementById('dsAIMatched').textContent = ai.ai_matched_count || 0;
+  document.getElementById('dsReceipts').textContent = receipts.length || 0;
+
+  /* Method breakdown chart */
+  var byMethod = m.by_method || {};
+  if (Object.keys(byMethod).length) {
+    renderMethodBars('dashMethodChart', byMethod, m.total_new || 1);
+  }
+
+  /* Unreconciled summary */
+  var unrec = data.unreconciled || {};
+  var unrecEl = document.getElementById('dashUnreconciled');
+  var unrecCount = unrec.total || unrec.count || 0;
+  var unrecItems = unrec.items || [];
+
+  if (unrecCount || unrecItems.length) {
+    var html =
+      '<div style="margin-bottom:12px;">' +
+      '<span style="font-size:1.2rem; font-weight:700; color:var(--amber);">' + unrecCount + '</span> ' +
+      '<span style="color:var(--text-muted);">previously unreconciled transactions</span></div>';
+
+    if (unrecItems.length) {
+      html +=
+        '<div class="table-wrap"><table><thead><tr>' +
+        '<th>Date</th><th>Narration</th><th>Amount</th><th>Account</th>' +
+        '</tr></thead><tbody>';
+      unrecItems.forEach(function(item) {
+        html +=
+          '<tr>' +
+          '<td>' + (item.date || '-') + '</td>' +
+          '<td>' + escHtml(item.narration || '-') + '</td>' +
+          '<td style="font-variant-numeric:tabular-nums;">' + formatAmount(item.amount || 0) + '</td>' +
+          '<td>' + (item.account || '-') + '</td></tr>';
+      });
+      html += '</tbody></table></div>';
+    }
+
+    if (unrec.total_amount) {
+      html +=
+        '<div style="margin-top:12px; font-size:0.85rem; color:var(--text-muted);">Total unreconciled: ' +
+        '<strong style="color:var(--red);">' + formatAmount(unrec.total_amount) + '</strong></div>';
+    }
+
+    unrecEl.innerHTML = html;
+  }
+}
+
+/* ================================================================
+   SALESFORCE SETTINGS (SETUP FORM)
+   ================================================================ */
+function saveSalesforceSettings() {
+  var btn = document.getElementById('btnSfSave');
+  var spinner = document.getElementById('sfSaveSpinner');
+  var statusEl = document.getElementById('sfSetupStatus');
+
+  btn.disabled = true;
+  spinner.style.display = 'inline-block';
+  statusEl.className = 'sf-setup-status';
+  statusEl.style.display = 'none';
+
+  var payload = {
+    username: document.getElementById('sfUsername').value.trim(),
+    password: document.getElementById('sfPassword').value,
+    security_token: document.getElementById('sfSecurityToken').value.trim(),
+    client_id: document.getElementById('sfClientId').value.trim(),
+    client_secret: document.getElementById('sfClientSecret').value,
+    instance_url: document.getElementById('sfInstanceUrl').value.trim()
+  };
+
+  fetch('/api/settings/salesforce', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      btn.disabled = false;
+      spinner.style.display = 'none';
+
+      if (data.success || data.connected) {
+        statusEl.className = 'sf-setup-status success';
+        statusEl.textContent = 'Connected successfully' + (data.instance ? ' to ' + data.instance : '') + '.';
+        showToast('Salesforce connected!', 'success');
+        /* Refresh health check to update badges */
+        checkHealth();
+        loadProjects();
+      } else {
+        statusEl.className = 'sf-setup-status error';
+        statusEl.textContent = 'Connection failed: ' + (data.error || data.message || 'Unknown error');
+        showToast('Salesforce connection failed', 'error');
+      }
+    })
+    .catch(function(err) {
+      btn.disabled = false;
+      spinner.style.display = 'none';
+      statusEl.className = 'sf-setup-status error';
+      statusEl.textContent = 'Request error: ' + err.message;
+      showToast('Error: ' + err.message, 'error');
+    });
+}
+
+function loadSalesforceSettings() {
+  var statusEl = document.getElementById('sfSetupStatus');
+
+  fetch('/api/settings/salesforce')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      /* Populate form fields if values are returned */
+      if (data.username) document.getElementById('sfUsername').value = data.username;
+      if (data.instance_url) document.getElementById('sfInstanceUrl').value = data.instance_url;
+      if (data.client_id) document.getElementById('sfClientId').value = data.client_id;
+      /* Never populate password/secret/token for security - just show status */
+
+      if (data.connected) {
+        statusEl.className = 'sf-setup-status success';
+        statusEl.textContent = 'Currently connected' + (data.instance ? ' to ' + data.instance : '') + '.';
+      } else if (data.username) {
+        statusEl.className = 'sf-setup-status info';
+        statusEl.textContent = 'Settings saved but not connected. Check credentials and try again.';
+      }
+    })
+    .catch(function() { /* ignore - settings endpoint may not exist yet */ });
+}
+
+/* ================================================================
+   HEALTH CHECK & INITIALIZATION
+   ================================================================ */
+function checkHealth() {
+  fetch('/api/health')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      STATE.health = data;
+
+      /* SF badge */
+      var sfDot = document.getElementById('badgeSFDot');
+      var sfBadge = document.getElementById('badgeSF');
+      if (data.salesforce && data.salesforce.connected) {
+        sfDot.className = 'badge-dot badge-dot-green';
+        sfBadge.className = 'badge badge-green';
+        document.getElementById('sfStatusIcon').className = 'sf-status-icon connected';
+        document.getElementById('sfStatusIcon').innerHTML = '&#9889;';
+        document.getElementById('sfStatusText').textContent = 'Connected to Salesforce';
+        document.getElementById('sfStatusSub').textContent = data.salesforce.instance || 'Salesforce org';
+      } else {
+        sfDot.className = 'badge-dot badge-dot-red';
+        sfBadge.className = 'badge badge-dim';
+        document.getElementById('sfStatusIcon').className = 'sf-status-icon disconnected';
+        document.getElementById('sfStatusIcon').innerHTML = '&#9729;';
+        document.getElementById('sfStatusText').textContent = 'Not Connected';
+        document.getElementById('sfStatusSub').textContent = 'Salesforce credentials not configured';
+      }
+
+      /* AI badge */
+      var aiDot = document.getElementById('badgeAIDot');
+      var aiBadge = document.getElementById('badgeAI');
+      if (data.claude_enabled) {
+        aiDot.className = 'badge-dot badge-dot-green';
+        aiBadge.className = 'badge badge-green';
+      } else {
+        aiDot.className = 'badge-dot badge-dot-red';
+        aiBadge.className = 'badge badge-dim';
+      }
+
+      /* Write mode badge */
+      var wDot = document.getElementById('badgeWriteDot');
+      var wBadge = document.getElementById('badgeWriteMode');
+      if (data.safety && data.safety.sf_write_mode) {
+        wDot.className = 'badge-dot badge-dot-red';
+        wBadge.className = 'badge badge-red';
+        wBadge.innerHTML = '<span class="badge-dot badge-dot-red"></span> LIVE';
+      } else {
+        wDot.className = 'badge-dot badge-dot-amber';
+        wBadge.className = 'badge badge-amber';
+        wBadge.innerHTML = '<span class="badge-dot badge-dot-amber"></span> DRY RUN';
+      }
+
+      /* Safety badges in SF tab */
+      if (data.safety) {
+        if (data.safety.sf_write_mode) {
+          document.getElementById('sfWriteBadge').className = 'badge badge-red';
+          document.getElementById('sfWriteBadge').textContent = 'SF WRITE: LIVE';
+        }
+        if (data.safety.email_live_mode) {
+          document.getElementById('sfEmailBadge').className = 'badge badge-red';
+          document.getElementById('sfEmailBadge').textContent = 'EMAIL: LIVE';
+        }
+      }
+    })
+    .catch(function(err) {
+      console.warn('Health check failed:', err);
+    });
+}
+
+function loadProjects() {
+  fetch('/api/salesforce/projects')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var projects = data.projects || [];
+      if (!projects.length) return;
+
+      var sel1 = document.getElementById('projectSelect');
+      var sel2 = document.getElementById('navProjectSelect');
+
+      projects.forEach(function(p) {
+        var name = typeof p === 'string' ? p : (p.name || p.label || '');
+        if (!name) return;
+
+        /* Skip if already exists */
+        var exists = false;
+        for (var i = 0; i < sel1.options.length; i++) {
+          if (sel1.options[i].value === name) { exists = true; break; }
+        }
+        if (exists) return;
+
+        var opt1 = document.createElement('option');
+        opt1.value = name;
+        opt1.textContent = name;
+        sel1.appendChild(opt1);
+
+        var opt2 = document.createElement('option');
+        opt2.value = name;
+        opt2.textContent = name;
+        sel2.appendChild(opt2);
+      });
+    })
+    .catch(function() { /* ignore */ });
+}
+
+/* ================================================================
+   INIT
+   ================================================================ */
+document.addEventListener('DOMContentLoaded', function() {
+  setupDropZone('dropMaster', 'fileMaster', 'fileMasterName', 'masterFile');
+  setupDropZone('dropBank', 'fileBank', 'fileBankName', 'bankFile');
+
+  /* Sync project selectors */
+  document.getElementById('navProjectSelect').addEventListener('change', function() {
+    document.getElementById('projectSelect').value = this.value;
+  });
+  document.getElementById('projectSelect').addEventListener('change', function() {
+    document.getElementById('navProjectSelect').value = this.value;
+  });
+
+  checkHealth();
+  loadProjects();
+  loadSalesforceSettings();
+});
+</script>
+</body>
+</html>"""

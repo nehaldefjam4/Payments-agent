@@ -6,7 +6,7 @@ All Dubai real estate document requirements, validation rules, and approval thre
 # =============================================================================
 # ANTHROPIC API
 # =============================================================================
-ANTHROPIC_API_KEY = ""  # Set via environment variable ANTHROPIC_API_KEY
+ANTHROPIC_API_KEY = "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"
 CLAUDE_MODEL = "claude-sonnet-4-20250514"
 CLAUDE_MAX_TOKENS = 4096          # Max tokens per Claude response in the agentic loop
 AGENT_MAX_TURNS = 15              # Safety limit: max tool-use round-trips
@@ -14,8 +14,8 @@ AGENT_MAX_TURNS = 15              # Safety limit: max tool-use round-trips
 # =============================================================================
 # SUPABASE
 # =============================================================================
-SUPABASE_URL = ""      # Set via environment variable SUPABASE_URL
-SUPABASE_ANON_KEY = "" # Set via environment variable SUPABASE_ANON_KEY
+SUPABASE_URL = "https://uqcteifgiyoibduveqdk.supabase.co"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVxY3RlaWZnaXlvaWJkdXZlcWRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4MjA2NDYsImV4cCI6MjA4OTM5NjY0Nn0.Z4snE56jxbACi_gihyCr7np0ZEnWsjckKPA7ykT2deY"
 
 # =============================================================================
 # DOCUMENT REQUIREMENTS BY TRANSACTION TYPE
@@ -160,11 +160,50 @@ EMAIL_CONFIG = {
 # AGENT IDENTITY
 # =============================================================================
 AGENT_IDENTITY = {
-    "name": "Document Checker Agent",
-    "role": "Validates booking documents for Dubai real estate transactions",
-    "organization": "fam Properties",
-    "version": "1.0.0",
+    "name": "Payment Collector Agent",
+    "role": "Autonomous payment reconciliation and client operations",
+    "organization": "fam Master Agency",
+    "version": "3.0.0",
 }
+
+# =============================================================================
+# SALESFORCE CONFIGURATION
+# =============================================================================
+import os
+SF_CONFIG = {
+    "instance_url": "momentum-ability-3447.my.salesforce.com",
+    "client_id": os.environ.get("SF_CLIENT_ID", ""),
+    "client_secret": os.environ.get("SF_CLIENT_SECRET", ""),
+    "username": os.environ.get("SF_USERNAME", ""),
+    "password": os.environ.get("SF_PASSWORD", ""),
+    "security_token": os.environ.get("SF_SECURITY_TOKEN", ""),
+}
+
+# Safety flags — ALL writes disabled by default
+SF_WRITE_MODE = os.environ.get("SF_WRITE_MODE", "false").lower() == "true"
+EMAIL_LIVE_MODE = os.environ.get("EMAIL_LIVE_MODE", "false").lower() == "true"
+
+# =============================================================================
+# AI MATCHING CONFIGURATION
+# =============================================================================
+AI_MATCHING_PROMPT = """You are an AI payment matching agent for fam Master Agency.
+
+Given a list of unmatched bank transactions and a knowledge base of unit→client mappings + expected payments, your job is to identify which unit each transaction belongs to.
+
+Analysis approach:
+1. Parse the transaction narration for any name fragments, unit references, or identifiers
+2. Cross-reference names against the known client database (consider name variations, transliterations)
+3. Check if the amount matches any pending installment for a unit
+4. Consider that one transaction may cover multiple installments (split payment)
+5. Common Arabic name variants: Mohammed/Mohamed/Muhammad, Ahmed/Ahmad, Ali/Aly, etc.
+
+For each transaction, return:
+- unit_no: the matched unit number (or "" if no match)
+- confidence: 0.0 to 1.0
+- reasoning: brief explanation of why this match was made
+- installments_covered: list of installment types if identifiable
+
+Return your analysis as a JSON array."""
 
 # =============================================================================
 # FILE WATCHING

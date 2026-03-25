@@ -3,392 +3,636 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>fam Properties — Document Checker</title>
+<title>Payment Collector Agent | fam Master Agency</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --primary: #1a1a2e;
-    --accent: #e94560;
-    --accent-light: #ff6b81;
-    --bg: #f8f9fa;
-    --card: #ffffff;
-    --text: #2d3436;
-    --muted: #636e72;
-    --success: #00b894;
-    --warning: #fdcb6e;
-    --danger: #d63031;
-    --border: #dfe6e9;
-  }
+:root {
+  --black: #000000;
+  --near-black: #111111;
+  --dark: #1a1a1a;
+  --charcoal: #222222;
+  --gray-700: #333333;
+  --gray-500: #666666;
+  --gray-400: #888888;
+  --gray-300: #aaaaaa;
+  --gray-200: #d4d4d4;
+  --gray-100: #eeeeee;
+  --white: #ffffff;
+  --red: #d51f2a;
+  --red-light: #e8434d;
+  --red-dim: rgba(213,31,42,0.08);
+  --green: #1b8a5a;
+  --green-bg: rgba(27,138,90,0.08);
+  --amber: #c5850a;
+  --amber-bg: rgba(197,133,10,0.08);
+  --danger-bg: rgba(213,31,42,0.06);
+  --radius: 8px;
+  --radius-lg: 12px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+  --shadow-lg: 0 4px 24px rgba(0,0,0,0.10);
+}
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+* { margin:0; padding:0; box-sizing:border-box; }
 
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    line-height: 1.6;
-  }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--gray-100);
+  color: var(--dark);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
 
-  header {
-    background: var(--primary);
-    color: white;
-    padding: 1.5rem 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
+/* ===== NAV ===== */
+nav {
+  background: var(--black);
+  padding: 0 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
 
-  header h1 {
-    font-size: 1.4rem;
-    font-weight: 600;
-  }
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
 
-  header h1 span {
-    color: var(--accent);
-  }
+.nav-brand .logo {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--white);
+  letter-spacing: -0.02em;
+}
 
-  .badge {
-    background: var(--accent);
-    color: white;
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: 600;
-  }
+.nav-brand .logo span { color: var(--red); }
 
-  .badge.green { background: var(--success); }
+.nav-brand .divider {
+  width: 1px;
+  height: 28px;
+  background: var(--gray-700);
+}
 
-  .container {
-    max-width: 960px;
-    margin: 2rem auto;
-    padding: 0 1.5rem;
-  }
+.nav-brand .app-name {
+  font-size: 0.82rem;
+  color: var(--gray-400);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
 
-  .card {
-    background: var(--card);
-    border-radius: 12px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-    padding: 2rem;
-    margin-bottom: 1.5rem;
-  }
+.nav-status {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  color: var(--gray-400);
+}
 
-  .card h2 {
-    font-size: 1.15rem;
-    margin-bottom: 1.25rem;
-    color: var(--primary);
-  }
+.nav-status .dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--gray-400);
+}
 
-  label {
-    display: block;
-    font-weight: 600;
-    font-size: 0.85rem;
-    margin-bottom: 0.35rem;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-  }
+/* ===== LAYOUT ===== */
+.container {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
 
-  select, input[type="text"], input[type="email"] {
-    width: 100%;
-    padding: 0.65rem 0.85rem;
-    border: 1.5px solid var(--border);
-    border-radius: 8px;
-    font-size: 0.95rem;
-    margin-bottom: 1rem;
-    transition: border 0.2s;
-  }
+.page-header { margin-bottom: 2rem; }
 
-  select:focus, input:focus {
-    outline: none;
-    border-color: var(--accent);
-  }
+.page-header h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--black);
+}
 
-  .row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-  }
+.page-header p {
+  color: var(--gray-500);
+  font-size: 0.92rem;
+  margin-top: 0.35rem;
+}
 
-  .drop-zone {
-    border: 2px dashed var(--border);
-    border-radius: 12px;
-    padding: 2.5rem 1.5rem;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.25s;
-    margin-bottom: 1rem;
-    position: relative;
-  }
+/* ===== CARDS ===== */
+.card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 1.75rem;
+  margin-bottom: 1.25rem;
+}
 
-  .drop-zone:hover, .drop-zone.active {
-    border-color: var(--accent);
-    background: rgba(233, 69, 96, 0.03);
-  }
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
 
-  .drop-zone p {
-    color: var(--muted);
-    margin-top: 0.5rem;
-    font-size: 0.9rem;
-  }
+.card-header h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
 
-  .drop-zone .icon {
-    font-size: 2.5rem;
-    color: var(--accent);
-  }
+.card-header .subtitle {
+  font-size: 0.78rem;
+  color: var(--gray-400);
+}
 
-  #file-list {
-    list-style: none;
-    margin-bottom: 1rem;
-  }
+/* ===== DROP ZONE ===== */
+.drop-zone {
+  border: 2px dashed var(--gray-200);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s;
+  margin-bottom: 1rem;
+}
 
-  #file-list li {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.5rem 0.75rem;
-    background: var(--bg);
-    border-radius: 6px;
-    margin-bottom: 0.35rem;
-    font-size: 0.88rem;
-  }
+.drop-zone:hover, .drop-zone.active {
+  border-color: var(--red);
+  background: var(--red-dim);
+}
 
-  #file-list li .remove {
-    color: var(--danger);
-    cursor: pointer;
-    font-weight: 700;
-  }
+.drop-zone .icon { font-size: 2.5rem; }
 
-  button.primary {
-    background: var(--accent);
-    color: white;
-    border: none;
-    padding: 0.85rem 2rem;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    width: 100%;
-    transition: background 0.2s;
-  }
+.drop-zone p {
+  color: var(--gray-500);
+  font-size: 0.88rem;
+  margin-top: 0.5rem;
+}
 
-  button.primary:hover { background: var(--accent-light); }
-  button.primary:disabled {
-    background: var(--border);
-    color: var(--muted);
-    cursor: not-allowed;
-  }
+.drop-zone p strong { color: var(--red); }
 
-  #loading {
-    display: none;
-    text-align: center;
-    padding: 3rem 1rem;
-  }
+/* ===== FILE LIST ===== */
+.file-list { list-style: none; }
 
-  .spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin: 0 auto 1rem;
-  }
+.file-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: var(--gray-100);
+  border-radius: 6px;
+  margin-bottom: 0.3rem;
+  font-size: 0.85rem;
+}
 
-  @keyframes spin { to { transform: rotate(360deg); } }
+.file-list li .size { color: var(--gray-400); font-size: 0.78rem; }
+.file-list li .remove { color: var(--red); cursor: pointer; font-weight: 700; font-size: 1.1rem; }
 
-  /* Results */
-  #results { display: none; }
+/* ===== BUTTONS ===== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius);
+  font-size: 0.88rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
 
-  .result-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-  }
+.btn-primary {
+  background: var(--black);
+  color: var(--white);
+  width: 100%;
+}
 
-  .result-header h2 { margin-bottom: 0; }
+.btn-primary:hover { background: var(--charcoal); }
+.btn-primary:disabled { background: var(--gray-200); color: var(--gray-400); cursor: not-allowed; }
 
-  .status-chip {
-    padding: 0.35rem 1rem;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 700;
-    text-transform: uppercase;
-  }
+.btn-red {
+  background: var(--red);
+  color: var(--white);
+  width: 100%;
+}
 
-  .status-chip.approved { background: #d4edda; color: #155724; }
-  .status-chip.pending  { background: #fff3cd; color: #856404; }
+.btn-red:hover { background: var(--red-light); }
 
-  .meter-bar {
-    height: 10px;
-    background: var(--border);
-    border-radius: 5px;
-    overflow: hidden;
-    margin: 0.75rem 0 0.35rem;
-  }
+/* ===== AGENT CONSOLE ===== */
+#agent-section { display: none; }
 
-  .meter-bar .fill {
-    height: 100%;
-    border-radius: 5px;
-    transition: width 0.6s ease;
-  }
+.agent-console {
+  background: var(--near-black);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+}
 
-  .meter-label {
-    font-size: 0.82rem;
-    color: var(--muted);
-  }
+.agent-console-header {
+  background: var(--black);
+  padding: 0.75rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--charcoal);
+}
 
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.88rem;
-  }
+.agent-console-header .agent-icon {
+  width: 28px;
+  height: 28px;
+  background: var(--red);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  color: white;
+  font-weight: 700;
+  animation: pulse-agent 2s ease-in-out infinite;
+}
 
-  th {
-    text-align: left;
-    padding: 0.6rem 0.75rem;
-    border-bottom: 2px solid var(--border);
-    color: var(--muted);
-    font-size: 0.78rem;
-    text-transform: uppercase;
-  }
+@keyframes pulse-agent {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(213,31,42,0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(213,31,42,0); }
+}
 
-  td {
-    padding: 0.55rem 0.75rem;
-    border-bottom: 1px solid var(--border);
-  }
+.agent-console-header .agent-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--white);
+  letter-spacing: 0.02em;
+}
 
-  .tag {
-    display: inline-block;
-    padding: 0.15rem 0.55rem;
-    border-radius: 4px;
-    font-size: 0.78rem;
-    font-weight: 600;
-  }
+.agent-console-header .agent-status {
+  margin-left: auto;
+  font-size: 0.72rem;
+  color: var(--gray-400);
+  font-family: 'JetBrains Mono', monospace;
+}
 
-  .tag.ok { background: #d4edda; color: #155724; }
-  .tag.warn { background: #fff3cd; color: #856404; }
-  .tag.err { background: #f8d7da; color: #721c24; }
-  .tag.miss { background: #e2e3e5; color: #383d41; }
+.agent-log {
+  padding: 1rem 1.25rem;
+  max-height: 300px;
+  overflow-y: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  line-height: 1.8;
+}
 
-  .missing-list {
-    list-style: none;
-    padding: 0;
-  }
+.agent-log .log-line {
+  color: var(--gray-300);
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.15rem 0;
+}
 
-  .missing-list li {
-    padding: 0.6rem 0.75rem;
-    border-left: 3px solid var(--danger);
-    background: #ffeef0;
-    margin-bottom: 0.4rem;
-    border-radius: 0 6px 6px 0;
-    font-size: 0.9rem;
-  }
+.agent-log .log-line .timestamp {
+  color: var(--gray-500);
+  white-space: nowrap;
+  min-width: 70px;
+}
 
-  .missing-list li small {
-    display: block;
-    color: var(--muted);
-    font-size: 0.78rem;
-  }
+.agent-log .log-line .prefix {
+  color: var(--red);
+  white-space: nowrap;
+}
 
-  .claude-box {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    color: white;
-    border-radius: 10px;
-    padding: 1.25rem 1.5rem;
-  }
+.agent-log .log-line.success .prefix { color: var(--green); }
+.agent-log .log-line.info .prefix { color: #5b9bd5; }
+.agent-log .log-line.thinking { color: var(--gray-400); font-style: italic; }
 
-  .claude-box h3 {
-    font-size: 0.95rem;
-    margin-bottom: 0.75rem;
-    opacity: 0.9;
-  }
+.agent-log .log-line.thinking::after {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 12px;
+  background: var(--gray-400);
+  margin-left: 2px;
+  animation: blink-cursor 0.8s infinite;
+}
 
-  .claude-box .verdict {
-    font-size: 1.1rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-  }
+@keyframes blink-cursor {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
 
-  .claude-box ul {
-    margin-left: 1.25rem;
-    font-size: 0.88rem;
-    opacity: 0.9;
-  }
+/* Agent progress bar */
+.agent-progress {
+  height: 3px;
+  background: var(--charcoal);
+  position: relative;
+  overflow: hidden;
+}
 
-  .claude-box ul li { margin-bottom: 0.3rem; }
+.agent-progress .fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--red), #ff6b6b);
+  transition: width 0.5s ease;
+  width: 0%;
+}
 
-  footer {
-    text-align: center;
-    padding: 2rem;
-    color: var(--muted);
-    font-size: 0.82rem;
-  }
+.agent-progress.indeterminate .fill {
+  width: 30%;
+  animation: indeterminate 1.5s ease-in-out infinite;
+}
 
-  @media (max-width: 600px) {
-    .row { grid-template-columns: 1fr; }
-    header { flex-direction: column; gap: 0.5rem; }
-  }
+@keyframes indeterminate {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
+/* Agent step cards */
+.agent-steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.agent-step {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 1rem;
+  text-align: center;
+  box-shadow: var(--shadow);
+  border: 2px solid transparent;
+  transition: all 0.3s;
+  opacity: 0.4;
+}
+
+.agent-step.active {
+  opacity: 1;
+  border-color: var(--red);
+  background: var(--red-dim);
+}
+
+.agent-step.done {
+  opacity: 1;
+  border-color: var(--green);
+  background: var(--green-bg);
+}
+
+.agent-step .step-num {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.agent-step.active .step-num { color: var(--red); }
+.agent-step.done .step-num { color: var(--green); }
+
+.agent-step .step-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gray-500);
+}
+
+/* ===== RESULTS ===== */
+#results { display: none; }
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-box {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 1.25rem;
+  text-align: center;
+}
+
+.stat-box .number {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.stat-box .label {
+  font-size: 0.75rem;
+  color: var(--gray-400);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 0.2rem;
+}
+
+.stat-box.green .number { color: var(--green); }
+.stat-box.amber .number { color: var(--amber); }
+.stat-box.red .number { color: var(--red); }
+
+/* ===== TABLE ===== */
+.table-wrap { overflow-x: auto; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+th {
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+  border-bottom: 2px solid var(--gray-100);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--gray-400);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--gray-100);
+  vertical-align: top;
+}
+
+tr:hover td { background: rgba(0,0,0,0.015); }
+
+/* ===== TAGS ===== */
+.tag {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.tag-matched { background: var(--green-bg); color: var(--green); }
+.tag-review  { background: var(--amber-bg); color: var(--amber); }
+.tag-unmatched { background: var(--danger-bg); color: var(--red); }
+
+.confidence-bar {
+  display: inline-block;
+  width: 50px;
+  height: 5px;
+  background: var(--gray-200);
+  border-radius: 3px;
+  overflow: hidden;
+  vertical-align: middle;
+  margin-right: 0.3rem;
+}
+
+.confidence-bar .fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s;
+}
+
+/* ===== EMAIL PREVIEW ===== */
+.email-card {
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.email-card .email-to {
+  font-size: 0.78rem;
+  color: var(--gray-400);
+}
+
+.email-card .email-subject {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin: 0.2rem 0 0.5rem;
+}
+
+/* ===== FOOTER ===== */
+footer {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  font-size: 0.78rem;
+  color: var(--gray-400);
+}
+
+footer a { color: var(--gray-500); text-decoration: none; }
+footer a:hover { color: var(--red); }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .stat-grid, .agent-steps { grid-template-columns: repeat(2, 1fr); }
+  nav { padding: 0 1rem; }
+  .container { padding: 1.25rem 1rem; }
+}
 </style>
 </head>
 <body>
 
-<header>
-  <h1><span>fam</span> Properties &mdash; Document Checker</h1>
-  <span class="badge" id="api-badge">Loading...</span>
-</header>
+<nav>
+  <div class="nav-brand">
+    <div class="logo">f<span>a</span>m</div>
+    <div class="divider"></div>
+    <div class="app-name">Payment Collector Agent</div>
+  </div>
+  <div class="nav-status">
+    <div class="dot" id="statusDot"></div>
+    <span id="statusText">Connecting...</span>
+  </div>
+</nav>
 
 <div class="container">
-  <!-- FORM -->
+  <!-- FORM SECTION -->
   <div id="form-section">
-    <div class="card">
-      <h2>Submit Documents for Review</h2>
-
-      <label>Transaction Type</label>
-      <select id="txType">
-        <option value="">-- Select --</option>
-        <option value="residential_sale">Residential Sale</option>
-        <option value="residential_rent">Residential Rent</option>
-        <option value="commercial_sale">Commercial Sale</option>
-        <option value="off_plan_sale">Off-Plan Sale</option>
-      </select>
-
-      <div id="req-preview" style="display:none; margin-bottom:1.25rem;"></div>
-
-      <div class="row">
-        <div>
-          <label>Broker Name</label>
-          <input type="text" id="brokerName" placeholder="e.g. Khalid Hassan">
-        </div>
-        <div>
-          <label>Broker Email</label>
-          <input type="email" id="brokerEmail" placeholder="e.g. khalid@agency.ae">
-        </div>
-      </div>
-
-      <label>Property Reference</label>
-      <input type="text" id="propertyRef" placeholder="e.g. Marina Heights - Unit 1204">
+    <div class="page-header">
+      <h1>Daily Reconciliation</h1>
+      <p>Upload the master sheet + bank statements. The agent autonomously parses, matches, reconciles, and generates receipts.</p>
     </div>
 
     <div class="card">
-      <h2>Upload Documents</h2>
+      <div class="card-header">
+        <h2>1. Master Sheet</h2>
+        <span class="subtitle">Century-Escrow &amp; Corporate Account.xlsx</span>
+      </div>
+      <div class="drop-zone" id="dropZoneMaster" style="padding:1.5rem 1rem;">
+        <div class="icon">&#128218;</div>
+        <p>Drop the master reconciliation sheet, or <strong>click to browse</strong></p>
+        <p style="font-size:0.75rem; color:var(--gray-300);">.xlsx format</p>
+        <input type="file" id="fileInputMaster" accept=".xlsx,.xls" style="display:none;">
+      </div>
+      <ul class="file-list" id="fileListMaster"></ul>
+    </div>
 
-      <div class="drop-zone" id="dropZone">
-        <div class="icon">&#128196;</div>
-        <p>Drag &amp; drop files here, or <strong>click to browse</strong></p>
-        <p style="font-size:0.78rem;">PDF, JPG, PNG, DOCX &mdash; max 25 MB each</p>
-        <input type="file" id="fileInput" multiple accept=".pdf,.jpg,.jpeg,.png,.docx,.doc,.tiff" style="display:none;">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+      <div class="card">
+        <div class="card-header">
+          <h2>2. Escrow Statement</h2>
+          <span class="subtitle">From Geo</span>
+        </div>
+        <div class="drop-zone" id="dropZone" style="padding:1.5rem 1rem;">
+          <p>Drop Escrow .xls here or <strong>browse</strong></p>
+          <input type="file" id="fileInput" accept=".pdf,.xlsx,.xls,.csv" style="display:none;">
+        </div>
+        <ul class="file-list" id="fileList"></ul>
       </div>
 
-      <ul id="file-list"></ul>
+      <div class="card">
+        <div class="card-header">
+          <h2>3. Corporate Statement</h2>
+          <span class="subtitle">From Geo</span>
+        </div>
+        <div class="drop-zone" id="dropZoneCR" style="padding:1.5rem 1rem;">
+          <p>Drop Corporate .xls here or <strong>browse</strong></p>
+          <input type="file" id="fileInputCR" accept=".pdf,.xlsx,.xls,.csv" style="display:none;">
+        </div>
+        <ul class="file-list" id="fileListCR"></ul>
+      </div>
+    </div>
 
-      <button class="primary" id="submitBtn" disabled>Check Documents</button>
+    <div class="card" style="padding:1.25rem 1.75rem;">
+      <button class="btn btn-primary" id="processBtn" disabled>
+        Start Agent Reconciliation
+      </button>
     </div>
   </div>
 
-  <!-- LOADING -->
-  <div id="loading">
-    <div class="spinner"></div>
-    <p style="color:var(--muted);">Analyzing your documents...</p>
+  <!-- AGENT PROCESSING SECTION -->
+  <div id="agent-section">
+    <div class="page-header">
+      <h1>Agent Processing</h1>
+      <p>The agent is autonomously reconciling your documents. No action needed.</p>
+    </div>
+
+    <div class="agent-steps">
+      <div class="agent-step" id="astep1">
+        <div class="step-num">1</div>
+        <div class="step-label">Parse &amp; Learn</div>
+      </div>
+      <div class="agent-step" id="astep2">
+        <div class="step-num">2</div>
+        <div class="step-label">Find New Txns</div>
+      </div>
+      <div class="agent-step" id="astep3">
+        <div class="step-num">3</div>
+        <div class="step-label">Match &amp; Reconcile</div>
+      </div>
+      <div class="agent-step" id="astep4">
+        <div class="step-num">4</div>
+        <div class="step-label">Receipts</div>
+      </div>
+    </div>
+
+    <div class="agent-console">
+      <div class="agent-console-header">
+        <div class="agent-icon">A</div>
+        <div class="agent-label">Payment Collector Agent</div>
+        <div class="agent-status" id="agentStatus">initializing...</div>
+      </div>
+      <div class="agent-progress indeterminate"><div class="fill" id="agentProgressFill"></div></div>
+      <div class="agent-log" id="agentLog"></div>
+    </div>
   </div>
 
   <!-- RESULTS -->
@@ -396,189 +640,380 @@
 </div>
 
 <footer>
-  fam Properties &copy; 2026 &mdash; Document Checker Agent v1.0
+  <a href="https://fam-master-agency.com" target="_blank">fam Master Agency</a> &nbsp;&middot;&nbsp; Payment Collector Agent v3.0 &nbsp;&middot;&nbsp; Century Project, Business Bay
 </footer>
 
 <script>
-const API = '';  // same origin
+const API = '';
 
 // Health check
 fetch(`${API}/api/health`).then(r => r.json()).then(d => {
-  const b = document.getElementById('api-badge');
-  b.textContent = d.claude_enabled ? 'AI Enabled' : 'Rule-Based';
-  b.className = 'badge' + (d.claude_enabled ? ' green' : '');
+  document.getElementById('statusDot').style.background = '#1b8a5a';
+  document.getElementById('statusText').textContent = d.claude_enabled ? 'AI Agent Active' : 'Agent Active';
 }).catch(() => {
-  document.getElementById('api-badge').textContent = 'Offline';
-});
-
-// Requirements preview
-let txTypes = {};
-fetch(`${API}/api/transaction-types`).then(r => r.json()).then(d => { txTypes = d; });
-
-document.getElementById('txType').addEventListener('change', function() {
-  const preview = document.getElementById('req-preview');
-  const t = txTypes[this.value];
-  if (!t) { preview.style.display = 'none'; return; }
-  preview.style.display = 'block';
-  preview.innerHTML = `<p style="font-size:0.85rem; color:var(--muted); margin-bottom:0.5rem;">
-    <strong>${t.label}</strong> requires <strong>${t.required_count}</strong> documents
-    (+ ${t.optional_count} optional):</p>
-    <div style="font-size:0.82rem; color:var(--muted); columns:2; column-gap:1rem;">`
-    + t.required.map(d => `<div style="margin-bottom:0.25rem;">&#8226; ${d.name}</div>`).join('')
-    + `</div>`;
+  document.getElementById('statusDot').style.background = '#d51f2a';
+  document.getElementById('statusText').textContent = 'Offline';
 });
 
 // File handling
-const dropZone = document.getElementById('dropZone');
-const fileInput = document.getElementById('fileInput');
-const fileList = document.getElementById('file-list');
-const submitBtn = document.getElementById('submitBtn');
-let selectedFiles = [];
+function setupDropZone(zoneId, inputId, listId, varName) {
+  const zone = document.getElementById(zoneId);
+  const input = document.getElementById(inputId);
+  const list = document.getElementById(listId);
+  zone.addEventListener('click', () => input.click());
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('active'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('active'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('active');
+    if (e.dataTransfer.files[0]) setFileVar(varName, e.dataTransfer.files[0], list);
+  });
+  input.addEventListener('change', () => { if (input.files[0]) setFileVar(varName, input.files[0], list); });
+}
 
-dropZone.addEventListener('click', () => fileInput.click());
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('active'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('active'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropZone.classList.remove('active');
-  addFiles(e.dataTransfer.files);
-});
-fileInput.addEventListener('change', () => addFiles(fileInput.files));
+const files = { master: null, escrow: null, corporate: null };
+const processBtn = document.getElementById('processBtn');
 
-function addFiles(files) {
-  for (const f of files) {
-    if (!selectedFiles.find(x => x.name === f.name)) selectedFiles.push(f);
+function setFileVar(varName, f, listEl) {
+  files[varName] = f;
+  const size = (f.size / 1024 / 1024).toFixed(2);
+  listEl.innerHTML = `<li><span>${f.name} <span class="size">(${size} MB)</span></span>
+    <span class="remove" onclick="clearFileVar('${varName}','${listEl.id}')">&times;</span></li>`;
+  checkReady();
+}
+
+function clearFileVar(varName, listId) {
+  files[varName] = null;
+  document.getElementById(listId).innerHTML = '';
+  checkReady();
+}
+
+function checkReady() {
+  processBtn.disabled = !(files.master && (files.escrow || files.corporate));
+}
+
+setupDropZone('dropZoneMaster', 'fileInputMaster', 'fileListMaster', 'master');
+setupDropZone('dropZone', 'fileInput', 'fileList', 'escrow');
+setupDropZone('dropZoneCR', 'fileInputCR', 'fileListCR', 'corporate');
+
+// ===== AGENT LOG HELPERS =====
+const agentLog = document.getElementById('agentLog');
+
+function logAgent(msg, type = '') {
+  const now = new Date();
+  const ts = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const prefixMap = { success: '[DONE]', info: '[INFO]', thinking: '[....]', '': '[EXEC]' };
+  const line = document.createElement('div');
+  line.className = `log-line ${type}`;
+  line.innerHTML = `<span class="timestamp">${ts}</span><span class="prefix">${prefixMap[type] || '[EXEC]'}</span><span>${msg}</span>`;
+  agentLog.appendChild(line);
+  agentLog.scrollTop = agentLog.scrollHeight;
+  return line;
+}
+
+function setAgentStep(stepNum) {
+  for (let i = 1; i <= 4; i++) {
+    const el = document.getElementById(`astep${i}`);
+    el.className = 'agent-step' + (i < stepNum ? ' done' : i === stepNum ? ' active' : '');
   }
-  renderFiles();
 }
 
-function renderFiles() {
-  fileList.innerHTML = '';
-  selectedFiles.forEach((f, i) => {
-    const li = document.createElement('li');
-    const size = (f.size / 1024 / 1024).toFixed(2);
-    li.innerHTML = `<span>${f.name} <small style="color:var(--muted)">(${size} MB)</small></span>
-      <span class="remove" data-idx="${i}">&times;</span>`;
-    fileList.appendChild(li);
-  });
-  submitBtn.disabled = selectedFiles.length === 0 || !document.getElementById('txType').value;
-  document.querySelectorAll('.remove').forEach(el => {
-    el.addEventListener('click', function() {
-      selectedFiles.splice(+this.dataset.idx, 1);
-      renderFiles();
-    });
-  });
-}
-
-document.getElementById('txType').addEventListener('change', () => {
-  submitBtn.disabled = selectedFiles.length === 0 || !document.getElementById('txType').value;
-});
-
-// Submit
-submitBtn.addEventListener('click', async () => {
-  const txType = document.getElementById('txType').value;
-  if (!txType || selectedFiles.length === 0) return;
+// ===== MAIN PROCESS =====
+processBtn.addEventListener('click', async () => {
+  if (!files.master) return;
 
   const fd = new FormData();
-  fd.append('transaction_type', txType);
-  fd.append('broker_name', document.getElementById('brokerName').value || 'Broker');
-  fd.append('broker_email', document.getElementById('brokerEmail').value || 'broker@agency.ae');
-  fd.append('property_ref', document.getElementById('propertyRef').value || '');
-  selectedFiles.forEach(f => fd.append('files', f));
+  fd.append('master_file', files.master);
+  if (files.escrow) fd.append('escrow_file', files.escrow);
+  if (files.corporate) fd.append('corporate_file', files.corporate);
 
+  // Show agent UI
   document.getElementById('form-section').style.display = 'none';
-  document.getElementById('loading').style.display = 'block';
+  document.getElementById('agent-section').style.display = 'block';
   document.getElementById('results').style.display = 'none';
 
-  try {
-    const res = await fetch(`${API}/api/check`, { method: 'POST', body: fd });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Check failed');
-    renderResults(data);
-  } catch (err) {
-    alert('Error: ' + err.message);
-    document.getElementById('form-section').style.display = 'block';
-  } finally {
-    document.getElementById('loading').style.display = 'none';
+  const statusEl = document.getElementById('agentStatus');
+  const progressBar = document.querySelector('.agent-progress');
+  const progressFill = document.getElementById('agentProgressFill');
+
+  logAgent('Agent initialized. Starting autonomous reconciliation...', 'info');
+  logAgent(`Master sheet: ${files.master.name}`, 'info');
+  if (files.escrow) logAgent(`Escrow statement: ${files.escrow.name}`, 'info');
+  if (files.corporate) logAgent(`Corporate statement: ${files.corporate.name}`, 'info');
+  logAgent('');
+
+  // Try SSE first, fall back to regular POST
+  let useSSE = true;
+
+  if (useSSE) {
+    setAgentStep(1);
+    statusEl.textContent = 'processing...';
+    let thinkingLine = logAgent('Uploading files and building knowledge base...', 'thinking');
+
+    try {
+      const res = await fetch(`${API}/api/reconcile/stream`, { method: 'POST', body: fd });
+
+      if (!res.ok || !res.headers.get('content-type')?.includes('text/event-stream')) {
+        // Not SSE, fall back
+        useSSE = false;
+      } else {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const payload = JSON.parse(line.slice(6));
+
+            if (thinkingLine) {
+              thinkingLine.classList.remove('thinking');
+              thinkingLine = null;
+            }
+
+            if (payload.action === 'error') {
+              logAgent(`Error: ${payload.data.error}`, '');
+              statusEl.textContent = 'error';
+              progressBar.classList.remove('indeterminate');
+              progressFill.style.width = '100%';
+              progressFill.style.background = 'var(--red)';
+              return;
+            }
+
+            if (payload.action === 'complete') {
+              // All done
+              for (let i = 1; i <= 4; i++) document.getElementById(`astep${i}`).className = 'agent-step done';
+              statusEl.textContent = 'complete';
+              progressBar.classList.remove('indeterminate');
+              progressFill.style.width = '100%';
+              progressFill.style.background = 'var(--green)';
+              logAgent('Reconciliation complete. Rendering results...', 'success');
+              setTimeout(() => renderResults(payload.data), 800);
+              return;
+            }
+
+            // Step progress
+            setAgentStep(payload.step);
+            logAgent(payload.action, payload.action.includes('ready') || payload.action.includes('Found') || payload.action.includes('updated') || payload.action.includes('Generated') ? 'success' : 'info');
+            thinkingLine = logAgent('Processing...', 'thinking');
+
+            const pct = Math.min(90, payload.step * 22);
+            progressBar.classList.remove('indeterminate');
+            progressFill.style.width = pct + '%';
+          }
+        }
+      }
+    } catch (e) {
+      useSSE = false;
+    }
+  }
+
+  if (!useSSE) {
+    // Fallback: regular POST with animated log
+    setAgentStep(1);
+    statusEl.textContent = 'processing...';
+    logAgent('Sending files to agent backend...', 'info');
+
+    const thinkingMessages = [
+      'Loading master sheet and building knowledge base...',
+      'Scanning for known units and client names...',
+      'Parsing bank statement transactions...',
+      'Identifying new transactions since last cutoff...',
+      'Running multi-phase matching: unit numbers, names, amounts...',
+      'Cross-referencing narrations against knowledge base...',
+      'Updating master sheet with matched data...',
+      'Generating payment receipts for matched credits...',
+      'Compiling reconciliation summary...',
+    ];
+
+    let msgIdx = 0;
+    let currentStep = 1;
+    const thinkTimer = setInterval(() => {
+      if (msgIdx < thinkingMessages.length) {
+        if (msgIdx > 0) {
+          const prev = agentLog.querySelector('.log-line.thinking:last-of-type');
+          if (prev) prev.classList.remove('thinking');
+        }
+        logAgent(thinkingMessages[msgIdx], msgIdx < thinkingMessages.length - 1 ? 'thinking' : 'info');
+        currentStep = Math.min(4, Math.floor(msgIdx / 2) + 1);
+        setAgentStep(currentStep);
+        msgIdx++;
+      }
+    }, 2000);
+
+    try {
+      const res = await fetch(`${API}/api/reconcile`, { method: 'POST', body: fd });
+      const data = await res.json();
+      clearInterval(thinkTimer);
+
+      if (!res.ok) throw new Error(data.detail || 'Processing failed');
+
+      // Show completed steps from backend
+      if (data.agent_steps) {
+        data.agent_steps.forEach(s => {
+          logAgent(s.action, 'success');
+        });
+      }
+
+      for (let i = 1; i <= 4; i++) document.getElementById(`astep${i}`).className = 'agent-step done';
+      statusEl.textContent = 'complete';
+      progressBar.classList.remove('indeterminate');
+      progressFill.style.width = '100%';
+      progressFill.style.background = 'var(--green)';
+      logAgent('Reconciliation complete. Rendering results...', 'success');
+
+      setTimeout(() => renderResults(data), 800);
+    } catch (err) {
+      clearInterval(thinkTimer);
+      logAgent(`Error: ${err.message}`, '');
+      statusEl.textContent = 'error';
+      progressBar.classList.remove('indeterminate');
+      progressFill.style.width = '100%';
+      progressFill.style.background = 'var(--red)';
+    }
   }
 });
 
 function renderResults(d) {
+  document.getElementById('agent-section').style.display = 'none';
   const el = document.getElementById('results');
   el.style.display = 'block';
 
-  const pct = d.completeness_pct;
-  const barColor = pct === 100 ? 'var(--success)' : pct >= 70 ? 'var(--warning)' : 'var(--danger)';
-  const statusClass = d.status === 'approved' ? 'approved' : 'pending';
+  const ms = d.master_stats || {};
+  const mt = d.matching || {};
+  const matched = d.matched_details || [];
+  const unmatched = d.unmatched_details || [];
+  const receipts = d.receipts || [];
+  const ur = d.unreconciled || {};
 
   let html = `
-    <div class="card">
-      <div class="result-header">
-        <h2>Results &mdash; ${d.submission_id}</h2>
-        <span class="status-chip ${statusClass}">${d.approval_label}</span>
-      </div>
-      <p style="font-size:0.88rem; color:var(--muted); margin-bottom:0.5rem;">
-        ${d.transaction_label} &bull; ${d.broker.name} &bull; ${d.property_ref || 'N/A'}
-      </p>
+  <div class="page-header">
+    <h1>Reconciliation Complete</h1>
+    <p>Knowledge base: ${ms.units_known || 0} units, ${ms.names_known || 0} names &nbsp;&middot;&nbsp;
+       Escrow cutoff: ${ms.cutoff_escrow || 'N/A'} &nbsp;&middot;&nbsp; Corporate cutoff: ${ms.cutoff_corporate || 'N/A'}</p>
+  </div>
 
-      <div style="margin:1rem 0;">
-        <strong style="font-size:1.5rem;">${pct}%</strong>
-        <span style="color:var(--muted); font-size:0.88rem;"> complete</span>
-        <div class="meter-bar"><div class="fill" style="width:${pct}%; background:${barColor};"></div></div>
-        <span class="meter-label">${d.present_documents.length} of ${d.present_documents.length + d.missing_documents.length} required documents</span>
-      </div>
-    </div>
+  <div class="stat-grid">
+    <div class="stat-box"><div class="number">${mt.total_new || 0}</div><div class="label">New Transactions</div></div>
+    <div class="stat-box green"><div class="number">${(mt.matched || 0) + (ur.now_matched || 0)}</div><div class="label">Matched to Unit</div></div>
+    <div class="stat-box red"><div class="number">${(mt.unmatched || 0) + (ur.still_unmatched || 0)}</div><div class="label">Needs Review</div></div>
+    <div class="stat-box amber"><div class="number">${ur.total_found || 0}</div><div class="label">Prev. Unreconciled</div></div>
+  </div>`;
 
-    <div class="card">
-      <h2>Document Classification</h2>
-      <table>
-        <thead><tr><th>File</th><th>Classified As</th><th>Confidence</th><th>Status</th></tr></thead>
-        <tbody>`;
-
-  d.file_results.forEach(f => {
-    const tag = f.classified_as
-      ? (f.confidence >= 0.6 ? '<span class="tag ok">OK</span>' : '<span class="tag warn">Low Conf.</span>')
-      : '<span class="tag err">Unclassified</span>';
-    const issues = f.issues.length
-      ? `<br><small style="color:var(--danger);">${f.issues.map(i=>i.message).join('; ')}</small>` : '';
-    html += `<tr>
-      <td>${f.file_name}${issues}</td>
-      <td>${f.classified_label || '&mdash;'}</td>
-      <td>${(f.confidence * 100).toFixed(0)}%</td>
-      <td>${tag}</td>
-    </tr>`;
-  });
-
-  html += `</tbody></table></div>`;
-
-  if (d.missing_documents.length > 0) {
-    html += `<div class="card">
-      <h2>Missing Documents (${d.missing_documents.length})</h2>
-      <ul class="missing-list">`;
-    d.missing_documents.forEach(m => {
-      html += `<li><strong>${m.name}</strong><small>${m.description}</small></li>`;
+  // Matched transactions
+  if (matched.length > 0) {
+    html += `<div class="card"><div class="card-header"><h2>Matched Transactions (${matched.length})</h2>
+      <span class="subtitle">Added to master sheet</span></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Account</th><th>Date</th><th>Amount (AED)</th><th>Unit</th><th>Client</th><th>Method</th><th>Conf.</th></tr></thead><tbody>`;
+    matched.forEach(r => {
+      const confPct = Math.round((r.match_confidence || 0) * 100);
+      const barColor = confPct >= 90 ? 'var(--green)' : confPct >= 60 ? 'var(--amber)' : 'var(--red)';
+      html += `<tr>
+        <td><span class="tag ${r.account === 'escrow' ? 'tag-matched' : 'tag-review'}">${r.account}</span></td>
+        <td>${r.date || ''}</td>
+        <td style="font-weight:600; font-variant-numeric:tabular-nums;">${(r.credit || 0).toLocaleString('en',{minimumFractionDigits:2})}</td>
+        <td style="font-weight:600;">${r.unit_no || ''}</td>
+        <td>${r.account_name || ''}</td>
+        <td style="font-size:0.78rem; color:var(--gray-400);">${(r.match_method || '').replace(/_/g,' ')}</td>
+        <td><div class="confidence-bar"><div class="fill" style="width:${confPct}%; background:${barColor};"></div></div>${confPct}%</td>
+      </tr>`;
     });
-    html += `</ul></div>`;
+    html += `</tbody></table></div></div>`;
   }
 
-  if (d.claude_analysis && !d.claude_analysis.error) {
-    const ca = d.claude_analysis;
-    html += `<div class="card">
-      <div class="claude-box">
-        <h3>Claude AI Analysis</h3>
-        <div class="verdict">${ca.verdict || 'N/A'} &bull; Risk: ${ca.risk || 'N/A'}</div>`;
-    if (ca.recommendations && ca.recommendations.length) {
-      html += `<ul>` + ca.recommendations.map(r => `<li>${r}</li>`).join('') + `</ul>`;
-    }
-    if (ca.red_flags && ca.red_flags.length) {
-      html += `<p style="margin-top:0.75rem; font-weight:600;">Red Flags:</p>
-        <ul>` + ca.red_flags.map(r => `<li>${r}</li>`).join('') + `</ul>`;
-    }
-    html += `</div></div>`;
+  // Unmatched transactions
+  if (unmatched.length > 0) {
+    html += `<div class="card"><div class="card-header"><h2>Needs Manual Review (${unmatched.length})</h2>
+      <span class="subtitle">Could not auto-match to a unit</span></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Account</th><th>Date</th><th>Amount (AED)</th><th>Name</th><th>Narration</th></tr></thead><tbody>`;
+    unmatched.forEach(r => {
+      html += `<tr>
+        <td><span class="tag tag-unmatched">${r.account}</span></td>
+        <td>${r.date || ''}</td>
+        <td style="font-weight:600;">${(r.credit || 0).toLocaleString('en',{minimumFractionDigits:2})}</td>
+        <td>${r.account_name || '<span style="color:var(--gray-300);">Unknown</span>'}</td>
+        <td style="font-size:0.78rem; color:var(--gray-400);">${(r.narration || '').substring(0, 60)}</td>
+      </tr>`;
+    });
+    html += `</tbody></table></div></div>`;
   }
 
-  html += `<div style="text-align:center; margin:1.5rem 0;">
-    <button class="primary" style="max-width:300px;" onclick="location.reload()">Check Another Submission</button>
+  // Receipts
+  if (receipts.length > 0) {
+    html += `<div class="card"><div class="card-header"><h2>Receipts Generated (${receipts.length})</h2>
+      <span class="subtitle">Ready to send to clients</span></div>`;
+    receipts.forEach(r => {
+      html += `<div class="email-card">
+        <div class="email-to">Unit ${r.unit_no} &nbsp;&middot;&nbsp; ${r.client_name || 'Client'} &nbsp;&middot;&nbsp; ${r.account}</div>
+        <div class="email-subject">AED ${(r.amount || 0).toLocaleString('en',{minimumFractionDigits:2})} &nbsp;&middot;&nbsp; ${r.receipt_no}</div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  // Previously unreconciled - now matched
+  if (ur.now_matched > 0) {
+    html += `<div class="card"><div class="card-header"><h2>Previously Unreconciled - Now Matched (${ur.now_matched})</h2>
+      <span class="subtitle">Updated in master sheet (blue highlight)</span></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Account</th><th>Row</th><th>Amount (AED)</th><th>Unit</th><th>Client</th><th>Method</th></tr></thead><tbody>`;
+    (ur.matched_details || []).forEach(r => {
+      html += `<tr>
+        <td><span class="tag tag-matched">${r.account}</span></td>
+        <td>${r.row}</td>
+        <td style="font-weight:600;">${(r.credit || 0).toLocaleString('en',{minimumFractionDigits:2})}</td>
+        <td style="font-weight:600;">${r.unit_no || ''}</td>
+        <td>${r.account_name || ''}</td>
+        <td style="font-size:0.78rem;">${(r.match_method || '').replace(/_/g,' ')}</td>
+      </tr>`;
+    });
+    html += `</tbody></table></div></div>`;
+  }
+
+  // Previously unreconciled - still unmatched
+  if (ur.still_unmatched > 0) {
+    html += `<div class="card"><div class="card-header"><h2>Still Unreconciled (${ur.still_unmatched})</h2>
+      <span class="subtitle">Could not auto-match - needs manual assignment</span></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Account</th><th>Row</th><th>Amount (AED)</th><th>Narration</th></tr></thead><tbody>`;
+    (ur.unmatched_details || []).forEach(r => {
+      html += `<tr>
+        <td><span class="tag tag-unmatched">${r.account}</span></td>
+        <td>${r.row}</td>
+        <td style="font-weight:600;">${(r.credit || 0).toLocaleString('en',{minimumFractionDigits:2})}</td>
+        <td style="font-size:0.78rem; color:var(--gray-400);">${(r.narration || '').substring(0, 60)}</td>
+      </tr>`;
+    });
+    html += `</tbody></table></div></div>`;
+  }
+
+  // Summary
+  html += `<div class="card">
+    <div class="card-header">
+      <h2>Summary</h2>
+      <span class="subtitle">Master sheet updated</span>
+    </div>
+    <table>
+      <tbody>
+        <tr><td style="font-weight:600;">Escrow new transactions</td><td style="text-align:right;">${mt.by_account?.escrow || 0}</td></tr>
+        <tr><td style="font-weight:600;">Corporate new transactions</td><td style="text-align:right;">${mt.by_account?.corporate || 0}</td></tr>
+        <tr><td style="font-weight:600;">Total matched to units</td><td style="text-align:right; color:var(--green); font-weight:700;">${mt.matched || 0}</td></tr>
+        <tr><td style="font-weight:600;">Needs manual review</td><td style="text-align:right; color:var(--red); font-weight:700;">${mt.unmatched || 0}</td></tr>
+        <tr><td style="font-weight:600;">Receipts generated</td><td style="text-align:right; font-weight:700;">${receipts.length}</td></tr>
+      </tbody>
+    </table>
+  </div>`;
+
+  html += `<div style="text-align:center; margin:2rem 0;">
+    <button class="btn btn-red" style="max-width:320px;" onclick="location.reload()">Process Another Statement</button>
   </div>`;
 
   el.innerHTML = html;
