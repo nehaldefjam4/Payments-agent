@@ -707,15 +707,15 @@ from agents.sf_browser_agent import plan_sf_automation
 
 @app.post("/api/salesforce/plan")
 async def sf_automation_plan(request: Request):
-    """Generate an SF browser automation plan from needs_receipt data."""
+    """Generate an SF browser automation plan for Claude Cowork execution.
+    Uses dual-app approach: fam app for payments, fam revamp for receipts/emails."""
     body = await request.json()
     needs_receipt = body.get("needs_receipt", [])
-    dry_run = body.get("dry_run", True)
 
     if not needs_receipt:
         return {"plan": None, "message": "No units need receipts"}
 
-    plan = plan_sf_automation(needs_receipt, dry_run=dry_run)
+    plan = plan_sf_automation(needs_receipt)
     return plan
 
 

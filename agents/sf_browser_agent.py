@@ -2,22 +2,20 @@
 Salesforce Browser Automation Agent — Uses Chrome browser session to perform
 actions in Salesforce without API credentials.
 
-Requires: Claude in Chrome MCP tools (runs from Claude Code session, not from Vercel)
+Requires: Claude in Chrome MCP tools (runs from Claude Code/Cowork session)
+
+TWO SALESFORCE APPS (same org: momentum-ability-3447):
+  - "Fam Properties" (fam app): Used for updating payment amounts only
+  - "Fam Properties (Revamp)": Used for Generate Invoice, Generate Statement,
+    Send Email, and all receipt/SOA operations
 
 Workflow per matched unit:
-1. Search for unit in SF global search
-2. Navigate to Payments tab
-3. Find the correct payment record (by amount/type)
-4. Update Amount Paid if needed (click Edit → update field → Save)
-5. Click "Generate Invoice" to create receipt
-6. Go back to unit → Account Statements tab → verify statement exists
-7. Send email to buyer via SF Activity panel (with receipt + statement)
-8. Mark receipt as "Done" in master sheet
-
-Safety:
-- DRY_RUN mode: logs all actions without executing clicks
-- Each action is confirmed before execution
-- Errors are caught and reported per-unit (doesn't stop the batch)
+1. Switch to "fam" app → Search unit → Payments tab → Update Amount Paid
+2. Switch to "fam revamp" app → Same unit → Payments tab → Find payment record
+3. Click "Generate Invoice" to create receipt
+4. Go to Account Statements tab → verify/generate statement
+5. Send email to buyer via SF Activity panel (with receipt + statement attached)
+6. Mark receipt as "Done" in master sheet
 """
 
 import time
@@ -48,7 +46,11 @@ class SFAction:
 class SFBrowserConfig:
     """Configuration for the SF browser agent."""
     sf_base_url: str = "https://momentum-ability-3447.lightning.force.com"
-    dry_run: bool = True        # If True, log actions but don't click
+    # Two SF apps in the same org:
+    # "fam" app — for updating payment amounts
+    fam_app_id: str = "06mNM000000gMB1"  # Fam Properties app ID (update if different)
+    # "fam revamp" app — for Generate Invoice, Statement, Email
+    revamp_app_id: str = "06mNM000000YtKv"  # Fam Properties (Revamp) app ID (update if different)
     wait_seconds: float = 3.0   # Wait time between page loads
     confirm_each: bool = False  # If True, pause and confirm before each action
 
@@ -92,29 +94,40 @@ class SalesforceBrowserAgent:
             if not unit_no:
                 continue
 
-            # Plan: Generate Invoice
+            # Action 1: Update payment in fam app
+            self.actions_log.append(SFAction(
+                unit_no=unit_no,
+                action_type="update_payment",
+                status="pending",
+                message=f"Update payment in fam app for Unit {unit_no} — AED {amount:,.2f}",
+                details={"amount": amount, "client": client, "app": "fam"},
+            ))
+
+            # Action 2: Generate invoice in fam revamp app
             self.actions_log.append(SFAction(
                 unit_no=unit_no,
                 action_type="generate_invoice",
-                status="dry_run" if self.config.dry_run else "pending",
-                message=f"Generate invoice for Unit {unit_no} — AED {amount:,.2f}",
-                details={
-                    "amount": amount,
-                    "client": client,
-                    "date": unit_info.get("date", ""),
-                },
+                status="pending",
+                message=f"Generate invoice in Revamp app for Unit {unit_no}",
+                details={"amount": amount, "client": client, "app": "fam_revamp"},
             ))
 
-            # Plan: Send email with receipt + statement
+            # Action 3: Generate statement in fam revamp app
+            self.actions_log.append(SFAction(
+                unit_no=unit_no,
+                action_type="generate_statement",
+                status="pending",
+                message=f"Generate statement in Revamp app for Unit {unit_no}",
+                details={"app": "fam_revamp"},
+            ))
+
+            # Action 4: Send email from fam revamp app
             self.actions_log.append(SFAction(
                 unit_no=unit_no,
                 action_type="send_email",
-                status="dry_run" if self.config.dry_run else "pending",
+                status="pending",
                 message=f"Send receipt + statement email to buyer of Unit {unit_no}",
-                details={
-                    "client": client,
-                    "attachments": ["receipt", "statement"],
-                },
+                details={"client": client, "attachments": ["receipt", "statement"], "app": "fam_revamp"},
             ))
 
         return self.actions_log
@@ -143,98 +156,153 @@ class SalesforceBrowserAgent:
     def get_instructions_for_unit(self, unit_no: str, amount: float = 0, client: str = "") -> list[dict]:
         """
         Return step-by-step browser instructions for processing a unit.
-        Each step has: action, description, selector/coordinate hints, wait_after.
-
-        These instructions are meant to be executed by Claude using Chrome MCP tools.
+        Uses TWO Salesforce apps:
+        - "fam" app: Update payment amount
+        - "fam revamp" app: Generate Invoice, Statement, Send Email
         """
         base = self.config.sf_base_url
         steps = []
 
-        # Step 1: Search for the unit
+        # ============================================================
+        # PHASE 1: Update payment in "fam" app
+        # ============================================================
+
         steps.append({
             "step": 1,
-            "action": "navigate",
-            "description": f"Search for Unit {unit_no} in Salesforce",
-            "url": f"{base}/lightning/o/Inventory_Unit__c/list",
-            "then": f"Use the search/filter to find unit {unit_no}, or use global search",
+            "phase": "fam_app",
+            "action": "switch_app",
+            "description": "Switch to 'Fam Properties' app (fam app)",
+            "hint": "Click the App Launcher (9-dot grid icon top-left) → search 'Fam Properties' → click it (NOT 'Fam Properties (Revamp)')",
+            "url": f"{base}/lightning/app/standard__LightningSalesConsole",
             "wait_after": self.config.wait_seconds,
         })
 
-        # Step 2: Click on the unit record
         steps.append({
             "step": 2,
-            "action": "click",
-            "description": f"Click on Unit {unit_no} to open the record",
-            "hint": f"Look for '{unit_no}' in the list view and click on it",
+            "phase": "fam_app",
+            "action": "search_unit",
+            "description": f"Search for Unit {unit_no} in the fam app",
+            "hint": f"Use the global search bar at the top → type '{unit_no}' → look for Inventory record → click it",
             "wait_after": self.config.wait_seconds,
         })
 
-        # Step 3: Go to Payments tab
         steps.append({
             "step": 3,
-            "action": "click",
+            "phase": "fam_app",
+            "action": "go_to_payments",
             "description": "Click the 'Payments' tab on the unit record",
-            "hint": "Tab labeled 'Payments' next to 'Details'",
+            "hint": "Tab labeled 'Payments' between 'Details' and 'Account Statements'",
             "wait_after": self.config.wait_seconds + 1,
         })
 
-        # Step 4: Find the right payment record
         steps.append({
             "step": 4,
-            "action": "find_and_click",
-            "description": f"Find the payment record matching AED {amount:,.2f} or the next unpaid/overdue one",
-            "hint": "Look at Sub Total and Status columns. Click the BP-XXXXX link for the matching payment",
+            "phase": "fam_app",
+            "action": "find_payment",
+            "description": f"Find the payment record for AED {amount:,.2f} (or the next unpaid/overdue one)",
+            "hint": "Look at Sub Total, Status, and Payment Detail columns. Click the BP-XXXXX link",
+            "amount": amount,
             "wait_after": self.config.wait_seconds,
         })
 
-        # Step 5: Click Generate Invoice
         steps.append({
             "step": 5,
-            "action": "click",
-            "description": "Click 'Generate Invoice' button",
-            "hint": "Button in the top-right area of the payment record header, next to 'Edit'",
+            "phase": "fam_app",
+            "action": "update_payment",
+            "description": f"Click 'Edit' → Update 'Amount Paid' field to include AED {amount:,.2f} → Click 'Save'",
+            "hint": "The Amount Paid field is in the Payment Information section. Add the new amount to the existing Amount Paid value.",
+            "amount": amount,
+            "wait_after": self.config.wait_seconds,
+            "confirm": True,
+        })
+
+        # ============================================================
+        # PHASE 2: Generate Receipt + Statement + Email in "fam revamp" app
+        # ============================================================
+
+        steps.append({
+            "step": 6,
+            "phase": "fam_revamp",
+            "action": "switch_app",
+            "description": "Switch to 'Fam Properties (Revamp)' app",
+            "hint": "Click the App Launcher (9-dot grid icon) → search 'Fam Properties' → click 'Fam Properties (Rev...)' (the Revamp version)",
+            "wait_after": self.config.wait_seconds,
+        })
+
+        steps.append({
+            "step": 7,
+            "phase": "fam_revamp",
+            "action": "search_unit",
+            "description": f"Search for Unit {unit_no} in the Revamp app",
+            "hint": f"Global search → type '{unit_no}' → click the Inventory record",
+            "wait_after": self.config.wait_seconds,
+        })
+
+        steps.append({
+            "step": 8,
+            "phase": "fam_revamp",
+            "action": "go_to_payments",
+            "description": "Click 'Payments' tab → find the same payment record",
+            "hint": "Same BP-XXXXX record from Phase 1",
+            "wait_after": self.config.wait_seconds + 1,
+        })
+
+        steps.append({
+            "step": 9,
+            "phase": "fam_revamp",
+            "action": "generate_invoice",
+            "description": "Click 'Generate Invoice' button to create the receipt",
+            "hint": "Button in the top-right area of the payment record, next to 'Edit' and 'Waived Off Compensation'",
             "wait_after": self.config.wait_seconds + 2,
             "confirm": True,
         })
 
-        # Step 6: Handle any confirmation dialog
         steps.append({
-            "step": 6,
+            "step": 10,
+            "phase": "fam_revamp",
             "action": "confirm_dialog",
-            "description": "If a confirmation dialog appears, click OK/Confirm/Save",
-            "hint": "Look for a modal with confirm/save button",
+            "description": "Handle any confirmation dialog — click OK/Confirm/Save",
+            "hint": "Look for a modal popup with a confirm button",
             "wait_after": self.config.wait_seconds,
         })
 
-        # Step 7: Go back to unit record
         steps.append({
-            "step": 7,
-            "action": "click",
+            "step": 11,
+            "phase": "fam_revamp",
+            "action": "go_back_to_unit",
             "description": f"Click the Unit '{unit_no}' link to go back to the inventory record",
-            "hint": "The Inventory field shows '201' (or unit number) as a link",
+            "hint": "Click the Inventory field value (the unit number link)",
             "wait_after": self.config.wait_seconds,
         })
 
-        # Step 8: Go to Account Statements tab
         steps.append({
-            "step": 8,
-            "action": "click",
-            "description": "Click the 'Account Statements' tab",
-            "hint": "Tab next to 'Payments' tab",
+            "step": 12,
+            "phase": "fam_revamp",
+            "action": "go_to_statements",
+            "description": "Click 'Account Statements' tab to verify/generate statement",
+            "hint": "Tab between 'Payments' and 'Documents'",
             "wait_after": self.config.wait_seconds + 1,
         })
 
-        # Step 9: Send email via Activity panel
         steps.append({
-            "step": 9,
+            "step": 13,
+            "phase": "fam_revamp",
             "action": "send_email",
-            "description": f"Send email to buyer ({client}) with receipt + statement",
-            "hint": "Click the email icon (envelope) in the Activity panel on the right side",
+            "description": f"Send email to buyer ({client}) with receipt + statement attached",
+            "hint": "Click the email icon (envelope) in the Activity panel on the right side of the page",
             "email_details": {
-                "to": f"Buyer of Unit {unit_no}",
+                "to": client or f"Buyer of Unit {unit_no}",
                 "subject": f"[fam Properties] Payment Receipt & Statement — Century Unit No.{unit_no}",
-                "body": f"Dear Valued Client,\n\nPlease find attached the payment receipt and updated statement of account for Century Unit No.{unit_no}.\n\nKindly acknowledge receipt of this email.\n\nRegards",
-                "attachments": ["Receipt PDF", "Statement of Account PDF"],
+                "body": (
+                    f"Dear Valued Client,\n\n"
+                    f"Good day!\n\n"
+                    f"Please find attached the payment receipt for the amount paid towards "
+                    f"Century Unit No.{unit_no}. Also attached is the updated Statement of Account "
+                    f"for your reference.\n\n"
+                    f"Kindly acknowledge receipt of this email.\n\n"
+                    f"Regards"
+                ),
+                "attachments": ["Payment Receipt PDF", "Statement of Account PDF"],
             },
             "wait_after": self.config.wait_seconds,
             "confirm": True,
@@ -278,18 +346,27 @@ class SalesforceBrowserAgent:
                 "actions": [
                     {
                         "type": "update_payment",
-                        "description": f"Update Amount Paid for the matching installment",
+                        "app": "fam",
+                        "description": "Update Amount Paid in 'Fam Properties' app",
                     },
                     {
                         "type": "generate_invoice",
-                        "description": f"Click 'Generate Invoice' on the payment record",
+                        "app": "fam_revamp",
+                        "description": "Generate Invoice/Receipt in 'Fam Properties (Revamp)' app",
+                    },
+                    {
+                        "type": "generate_statement",
+                        "app": "fam_revamp",
+                        "description": "Verify/Generate Statement of Account in Revamp app",
                     },
                     {
                         "type": "send_email",
-                        "description": f"Send receipt + statement to buyer via SF email",
+                        "app": "fam_revamp",
+                        "description": "Send receipt + statement email to buyer from Revamp app",
                     },
                     {
                         "type": "mark_master_sheet",
+                        "app": "local",
                         "description": f"Mark receipt column as 'Done' in master sheet row {item.get('row', '?')}",
                     },
                 ],
@@ -360,16 +437,17 @@ class SalesforceBrowserAgent:
 # Convenience function for Claude Code execution
 # ---------------------------------------------------------------------------
 
-def plan_sf_automation(needs_receipt: list[dict], dry_run: bool = True) -> dict:
+def plan_sf_automation(needs_receipt: list[dict]) -> dict:
     """
     Generate an SF browser automation plan from the needs_receipt list.
+    Uses dual-app approach: fam app for payments, fam revamp for receipts/emails.
 
-    Usage in Claude Code:
+    Usage in Claude Code/Cowork:
         from agents.sf_browser_agent import plan_sf_automation
         plan = plan_sf_automation(needs_receipt_data)
         print(json.dumps(plan, indent=2))
     """
-    config = SFBrowserConfig(dry_run=dry_run)
+    config = SFBrowserConfig()
     agent = SalesforceBrowserAgent(config=config)
     return agent.generate_batch_plan(needs_receipt)
 
