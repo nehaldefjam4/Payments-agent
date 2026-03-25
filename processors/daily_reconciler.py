@@ -150,7 +150,9 @@ class DailyReconciler:
                 # Date filter: only process 2026+ transactions
                 date_val = ws.cell(r, 1).value
                 parsed_date = self._parse_date(date_val)
-                if parsed_date and parsed_date.year < 2026:
+                # Only process transactions from 14-Mar-2026 onwards
+                cutoff = datetime(2026, 3, 14)
+                if parsed_date and parsed_date < cutoff:
                     continue
 
                 unit_val = ws.cell(r, unit_col).value
