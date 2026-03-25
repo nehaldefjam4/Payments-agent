@@ -115,25 +115,47 @@ class SalesforceService:
     # ------------------------------------------------------------------
 
     def connect(self) -> bool:
-        """Establish connection to Salesforce."""
+        """Establish connection to Salesforce using username + password.
+        No Connected App required — uses simple SOAP login."""
         if not HAS_SIMPLE_SF:
             self._error = "simple-salesforce not installed"
             return False
 
-        if not all([SF_CLIENT_ID, SF_USERNAME, SF_PASSWORD]):
-            self._error = "Missing SF credentials (SF_CLIENT_ID, SF_USERNAME, SF_PASSWORD)"
+        username = os.environ.get("SF_USERNAME", SF_USERNAME)
+        password = os.environ.get("SF_PASSWORD", SF_PASSWORD)
+        security_token = os.environ.get("SF_SECURITY_TOKEN", SF_SECURITY_TOKEN)
+
+        if not username or not password:
+            self._error = "Missing SF credentials (SF_USERNAME, SF_PASSWORD)"
             return False
 
         try:
+            # Try 1: username + password + security_token via standard login
             self._sf = Salesforce(
-                username=SF_USERNAME,
-                password=SF_PASSWORD,
-                security_token=SF_SECURITY_TOKEN,
-                consumer_key=SF_CLIENT_ID,
-                consumer_secret=SF_CLIENT_SECRET,
-                domain="login",  # use "test" for sandbox
+                username=username,
+                password=password,
+                security_token=security_token or "",
+                domain="login",
             )
             self._connected = True
+            self._error = ""
+            return True
+        except SalesforceAuthenticationFailed:
+            pass  # Try My Domain approach next
+        except Exception as e:
+            self._error = f"SF connection error: {e}"
+            return False
+
+        try:
+            # Try 2: My Domain login (for orgs with custom domain)
+            self._sf = Salesforce(
+                username=username,
+                password=password,
+                security_token=security_token or "",
+                domain="momentum-ability-3447.my",
+            )
+            self._connected = True
+            self._error = ""
             return True
         except SalesforceAuthenticationFailed as e:
             self._error = f"SF auth failed: {e}"
@@ -594,11 +616,12 @@ class SalesforceService:
 
     def get_status(self) -> dict:
         """Return current service status."""
+        username = os.environ.get("SF_USERNAME", SF_USERNAME)
         return {
             "connected": self.is_connected,
             "error": self._error,
             "write_mode": SF_WRITE_MODE,
             "email_live_mode": EMAIL_LIVE_MODE,
-            "has_credentials": bool(SF_CLIENT_ID and SF_USERNAME),
+            "has_credentials": bool(username),
             "instance": SF_INSTANCE_URL,
         }

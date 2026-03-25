@@ -657,13 +657,23 @@ tbody tr:last-child td { border-bottom: none; }
           <div class="drop-zone-file" id="fileMasterName" style="display:none"></div>
           <input type="file" id="fileMaster" accept=".xlsx,.xls,.csv" style="display:none" onclick="event.stopPropagation()">
         </div>
-        <!-- Drop Zone 2: Bank Statement -->
+        <!-- Drop Zone 2: Escrow Statement -->
         <div class="drop-zone" id="dropBank">
           <div class="drop-zone-icon">&#127974;</div>
-          <div class="drop-zone-title">Bank Statement</div>
-          <div class="drop-zone-sub">Escrow or corporate account PDF / CSV</div>
+          <div class="drop-zone-title">Escrow Statement</div>
+          <div class="drop-zone-sub">Emirates NBD escrow account .xls</div>
           <div class="drop-zone-file" id="fileBankName" style="display:none"></div>
           <input type="file" id="fileBank" accept=".pdf,.csv,.xlsx,.xls" style="display:none" onclick="event.stopPropagation()">
+        </div>
+      </div>
+      <!-- Drop Zone 3: Corporate Statement -->
+      <div style="margin-top:12px;">
+        <div class="drop-zone" id="dropCorporate">
+          <div class="drop-zone-icon">&#127974;</div>
+          <div class="drop-zone-title">Corporate Statement</div>
+          <div class="drop-zone-sub">Corporate account .xls (optional)</div>
+          <div class="drop-zone-file" id="fileCorporateName" style="display:none"></div>
+          <input type="file" id="fileCorporate" accept=".pdf,.csv,.xlsx,.xls" style="display:none" onclick="event.stopPropagation()">
         </div>
       </div>
     </div>
@@ -767,30 +777,24 @@ tbody tr:last-child td { border-bottom: none; }
         </div>
         <div class="grid-2">
           <div class="sf-form-group">
-            <label class="sf-form-label" for="sfUsername">Username</label>
+            <label class="sf-form-label" for="sfUsername">Salesforce Username</label>
             <input type="text" class="sf-form-input" id="sfUsername" placeholder="user@company.com" autocomplete="off">
           </div>
           <div class="sf-form-group">
-            <label class="sf-form-label" for="sfPassword">Password</label>
-            <input type="password" class="sf-form-input" id="sfPassword" placeholder="Salesforce password" autocomplete="off">
+            <label class="sf-form-label" for="sfPassword">Salesforce Password</label>
+            <input type="password" class="sf-form-input" id="sfPassword" placeholder="Your Salesforce password" autocomplete="off">
           </div>
-          <div class="sf-form-group">
-            <label class="sf-form-label" for="sfSecurityToken">Security Token</label>
-            <input type="text" class="sf-form-input" id="sfSecurityToken" placeholder="Your SF security token" autocomplete="off">
-          </div>
-          <div class="sf-form-group">
-            <label class="sf-form-label" for="sfClientId">Client ID</label>
-            <input type="text" class="sf-form-input" id="sfClientId" placeholder="Connected App consumer key" autocomplete="off">
-          </div>
-          <div class="sf-form-group">
-            <label class="sf-form-label" for="sfClientSecret">Client Secret</label>
-            <input type="password" class="sf-form-input" id="sfClientSecret" placeholder="Connected App consumer secret" autocomplete="off">
-          </div>
-          <div class="sf-form-group">
-            <label class="sf-form-label" for="sfInstanceUrl">Instance URL</label>
-            <input type="text" class="sf-form-input" id="sfInstanceUrl" placeholder="momentum-ability-3447.my.salesforce.com" value="momentum-ability-3447.my.salesforce.com" autocomplete="off">
+          <div class="sf-form-group" style="grid-column: 1 / -1;">
+            <label class="sf-form-label" for="sfSecurityToken">Security Token <span style="color:var(--text-muted); font-weight:400;">(required by Salesforce)</span></label>
+            <input type="text" class="sf-form-input" id="sfSecurityToken" placeholder="Get it from: SF Settings > Reset My Security Token" autocomplete="off">
+            <div style="margin-top:6px; font-size:0.72rem; color:var(--text-muted);">
+              In Salesforce: Click your avatar > Settings > Reset My Security Token. The token is emailed to you.
+            </div>
           </div>
         </div>
+        <input type="hidden" id="sfClientId" value="">
+        <input type="hidden" id="sfClientSecret" value="">
+        <input type="hidden" id="sfInstanceUrl" value="momentum-ability-3447.my.salesforce.com">
         <div style="margin-top:16px; display:flex; align-items:center; gap:12px;">
           <button class="btn btn-primary" id="btnSfSave" onclick="saveSalesforceSettings()">
             Save &amp; Connect
@@ -901,6 +905,7 @@ tbody tr:last-child td { border-bottom: none; }
 var STATE = {
   masterFile: null,
   bankFile: null,
+  corporateFile: null,
   result: null,
   allTransactions: [],
   sfActions: [],
@@ -984,7 +989,7 @@ function formatSize(bytes) {
 }
 
 function updateRunButton() {
-  document.getElementById('btnRunAgent').disabled = !STATE.masterFile;
+  document.getElementById('btnRunAgent').disabled = !(STATE.masterFile && (STATE.bankFile || STATE.corporateFile));
 }
 
 /* ================================================================
@@ -1007,6 +1012,7 @@ function runAgent() {
   var fd = new FormData();
   fd.append('master_file', STATE.masterFile);
   if (STATE.bankFile) fd.append('escrow_file', STATE.bankFile);
+  if (STATE.corporateFile) fd.append('corporate_file', STATE.corporateFile);
 
   var project = document.getElementById('projectSelect').value;
   fd.append('project', project);
@@ -1770,6 +1776,7 @@ function loadProjects() {
 document.addEventListener('DOMContentLoaded', function() {
   setupDropZone('dropMaster', 'fileMaster', 'fileMasterName', 'masterFile');
   setupDropZone('dropBank', 'fileBank', 'fileBankName', 'bankFile');
+  setupDropZone('dropCorporate', 'fileCorporate', 'fileCorporateName', 'corporateFile');
 
   /* Sync project selectors */
   document.getElementById('navProjectSelect').addEventListener('change', function() {

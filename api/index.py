@@ -243,6 +243,11 @@ async def reconcile_endpoint(
 
         # ── Build response ──
         summary = reconciler.get_summary()
+        ur = summary.get("unreconciled", {})
+
+        # Combine new transaction matches + unreconciled matches for total
+        total_matched = summary.get("matched", 0) + ur.get("now_matched", 0)
+        total_unmatched = summary.get("unmatched", 0) + ur.get("still_unmatched", 0)
 
         # Encode updated master sheet as base64 for download
         master_download = None
@@ -261,8 +266,12 @@ async def reconcile_endpoint(
             },
             "matching": {
                 "total_new": summary.get("total_new_transactions", 0),
-                "matched": summary.get("matched", 0),
-                "unmatched": summary.get("unmatched", 0),
+                "matched": total_matched,
+                "unmatched": total_unmatched,
+                "new_matched": summary.get("matched", 0),
+                "new_unmatched": summary.get("unmatched", 0),
+                "prev_unreconciled_matched": ur.get("now_matched", 0),
+                "prev_unreconciled_still": ur.get("still_unmatched", 0),
                 "by_account": summary.get("by_account", {}),
                 "by_method": summary.get("by_method", {}),
             },
