@@ -695,6 +695,25 @@ async def sf_match_installments(request: Request):
 
 
 # ===========================================================================
+# SF BROWSER AUTOMATION PLAN
+# ===========================================================================
+from agents.sf_browser_agent import plan_sf_automation
+
+@app.post("/api/salesforce/plan")
+async def sf_automation_plan(request: Request):
+    """Generate an SF browser automation plan from needs_receipt data."""
+    body = await request.json()
+    needs_receipt = body.get("needs_receipt", [])
+    dry_run = body.get("dry_run", True)
+
+    if not needs_receipt:
+        return {"plan": None, "message": "No units need receipts"}
+
+    plan = plan_sf_automation(needs_receipt, dry_run=dry_run)
+    return plan
+
+
+# ===========================================================================
 # SALESFORCE CREDENTIALS MANAGEMENT (stored in Supabase)
 # ===========================================================================
 
