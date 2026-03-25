@@ -650,20 +650,20 @@ tbody tr:last-child td { border-bottom: none; }
       <div class="section-title">Upload Documents</div>
       <div class="grid-2">
         <!-- Drop Zone 1: Master Sheet -->
-        <div class="drop-zone" id="dropMaster" onclick="document.getElementById('fileMaster').click()">
+        <div class="drop-zone" id="dropMaster">
           <div class="drop-zone-icon">&#128196;</div>
           <div class="drop-zone-title">Master Sheet</div>
           <div class="drop-zone-sub">Upload your master Excel sheet</div>
           <div class="drop-zone-file" id="fileMasterName" style="display:none"></div>
-          <input type="file" id="fileMaster" accept=".xlsx,.xls,.csv" style="display:none">
+          <input type="file" id="fileMaster" accept=".xlsx,.xls,.csv" style="display:none" onclick="event.stopPropagation()">
         </div>
         <!-- Drop Zone 2: Bank Statement -->
-        <div class="drop-zone" id="dropBank" onclick="document.getElementById('fileBank').click()">
+        <div class="drop-zone" id="dropBank">
           <div class="drop-zone-icon">&#127974;</div>
           <div class="drop-zone-title">Bank Statement</div>
           <div class="drop-zone-sub">Escrow or corporate account PDF / CSV</div>
           <div class="drop-zone-file" id="fileBankName" style="display:none"></div>
-          <input type="file" id="fileBank" accept=".pdf,.csv,.xlsx,.xls" style="display:none">
+          <input type="file" id="fileBank" accept=".pdf,.csv,.xlsx,.xls" style="display:none" onclick="event.stopPropagation()">
         </div>
       </div>
     </div>
@@ -945,6 +945,9 @@ function setupDropZone(zoneId, inputId, nameId, fileKey) {
   var input = document.getElementById(inputId);
   var nameEl = document.getElementById(nameId);
 
+  zone.addEventListener('click', function(e) {
+    if (e.target !== input) { input.click(); }
+  });
   zone.addEventListener('dragover', function(e) {
     e.preventDefault();
     zone.classList.add('dragover');
@@ -1274,14 +1277,14 @@ function renderTransactions(txs) {
   var html =
     '<div class="table-wrap"><table>' +
     '<thead><tr>' +
-    '<th onclick="sortTx('date')">Date</th>' +
-    '<th onclick="sortTx('narration')">Narration</th>' +
-    '<th onclick="sortTx('amount')">Amount</th>' +
-    '<th onclick="sortTx('unit_no')">Unit</th>' +
-    '<th onclick="sortTx('client')">Client</th>' +
-    '<th onclick="sortTx('_confidence')">Confidence</th>' +
-    '<th onclick="sortTx('_method')">Method</th>' +
-    '<th onclick="sortTx('_status')">Status</th>' +
+    '<th onclick="sortTx(&apos;date&apos;)">Date</th>' +
+    '<th onclick="sortTx(&apos;narration&apos;)">Narration</th>' +
+    '<th onclick="sortTx(&apos;amount&apos;)">Amount</th>' +
+    '<th onclick="sortTx(&apos;unit_no&apos;)">Unit</th>' +
+    '<th onclick="sortTx(&apos;client&apos;)">Client</th>' +
+    '<th onclick="sortTx(&apos;_confidence&apos;)">Confidence</th>' +
+    '<th onclick="sortTx(&apos;_method&apos;)">Method</th>' +
+    '<th onclick="sortTx(&apos;_status&apos;)">Status</th>' +
     '<th>SF Status</th>' +
     '</tr></thead><tbody>';
 
