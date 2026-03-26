@@ -1286,7 +1286,8 @@ function buildTransactions(data) {
   (data.matched_details || []).forEach(function(t) {
     t._status = 'matched';
     t._method = t.match_method || t.method || 'unknown';
-    t._confidence = t.confidence != null ? t.confidence : 1.0;
+    t._confidence = t.confidence != null ? t.confidence : (t.match_confidence != null ? t.match_confidence : 1.0);
+    t._alternatives = t.alternative_matches || [];
     if (t._method === 'ai_match') t._status = 'ai_matched';
     txs.push(t);
   });
@@ -1296,6 +1297,7 @@ function buildTransactions(data) {
     t._status = 'unmatched';
     t._method = '-';
     t._confidence = 0;
+    t._alternatives = t.alternative_matches || [];
     txs.push(t);
   });
 
@@ -1312,6 +1314,7 @@ function buildTransactions(data) {
       _status: 'matched',
       _method: t.match_method || t.method || 'unknown',
       _confidence: t.match_confidence != null ? t.match_confidence : (t.confidence != null ? t.confidence : 1.0),
+      _alternatives: t.alternative_matches || [],
       _source: 'unreconciled'
     });
   });
@@ -1327,6 +1330,7 @@ function buildTransactions(data) {
       _status: 'unmatched',
       _method: '-',
       _confidence: 0,
+      _alternatives: t.alternative_matches || [],
       _source: 'unreconciled'
     });
   });
@@ -1415,6 +1419,16 @@ function renderTransactions(txs) {
     html += '<td>' + (t.date || t.value_date || '-') + '</td>';
     html += '<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escHtml(narration) + '">' + escHtml(narration);
 
+    /* Alternative matches toggle button */
+    var hasAlts = (t._alternatives || []).length > 0 && (t._status === 'review' || t._status === 'unmatched' || conf < 80);
+    if (hasAlts) {
+      html +=
+        '<br><button class="alt-toggle-btn" onclick="toggleAltMatches(' + idx + ')" style="' +
+        'background:rgba(245,158,11,0.12);color:var(--amber);border:1px solid rgba(245,158,11,0.25);' +
+        'border-radius:4px;padding:2px 8px;font-size:0.66rem;cursor:pointer;margin-top:2px;">' +
+        '&#9660; ' + (t._alternatives || []).length + ' alternative(s)</button>';
+    }
+
     /* AI reasoning toggle */
     if (t._ai_reasoning) {
       html +=
@@ -1434,6 +1448,31 @@ function renderTransactions(txs) {
     html += '<td>' + statusBadge(t._status) + '</td>';
     html += '<td>' + (sfStatus !== '-' ? '<span class="badge badge-dim">' + sfStatus + '</span>' : '-') + '</td>';
     html += '</tr>';
+
+    /* Alternative matches expandable row — show for review/unmatched/low-confidence items */
+    var alts = t._alternatives || [];
+    if (alts.length > 0 && (t._status === 'review' || t._status === 'unmatched' || conf < 80)) {
+      html += '<tr class="alt-matches-row ' + rowClass + '" id="altRow-' + idx + '" style="display:none;">';
+      html += '<td colspan="9" style="padding:6px 12px 10px 32px; background:rgba(255,255,255,0.03);">';
+      html += '<div style="font-size:0.72rem; color:var(--amber); margin-bottom:4px; font-weight:600;">Top Alternative Matches:</div>';
+      html += '<div style="display:flex; gap:8px; flex-wrap:wrap;">';
+      alts.forEach(function(alt, ai) {
+        var altConf = Math.round((alt.confidence || 0) * 100);
+        var altConfCls = altConf >= 60 ? 'mid' : 'low';
+        html +=
+          '<div style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:5px 10px; font-size:0.72rem; min-width:160px;">' +
+          '<div style="font-weight:600; color:#fff;">Unit ' + escHtml(alt.unit_no || '-') + '</div>' +
+          '<div style="color:var(--text-muted);">' + escHtml(alt.account_name || '-') + '</div>' +
+          '<div style="margin-top:2px;">' +
+          '<span class="conf-pct ' + altConfCls + '" style="font-size:0.68rem;">' + altConf + '%</span>' +
+          ' <span class="badge badge-dim" style="font-size:0.62rem;">' + escHtml(alt.method || '-') + '</span>' +
+          '</div></div>';
+      });
+      html += '</div></td></tr>';
+
+      /* Inject toggle button into the previous row's status cell (rewrite the last </tr>) */
+      /* Instead, add a small toggle link in the narration cell */
+    }
   });
 
   html += '</tbody></table></div>';
@@ -1454,6 +1493,23 @@ function statusBadge(status) {
 function toggleReasoning(idx) {
   var el = document.getElementById('aiReason-' + idx);
   if (el) el.classList.toggle('open');
+}
+
+function toggleAltMatches(idx) {
+  var row = document.getElementById('altRow-' + idx);
+  if (!row) return;
+  var isHidden = row.style.display === 'none';
+  row.style.display = isHidden ? 'table-row' : 'none';
+  /* Update button arrow direction */
+  var btn = row.previousElementSibling;
+  if (btn) {
+    var toggleBtn = btn.querySelector('.alt-toggle-btn');
+    if (toggleBtn) {
+      /* Replace the arrow character (rendered from entity) */
+      var text = toggleBtn.textContent;
+      toggleBtn.innerHTML = (isHidden ? '&#9650; ' : '&#9660; ') + text.replace(/^[\u25B2\u25BC]\s*/, '');
+    }
+  }
 }
 
 function formatAmount(n) {
@@ -1622,6 +1678,7 @@ function buildSFActions(data) {
         date: item.date || item.value_date || '',
         match_method: item.match_method || item.method || '',
         narration: item.narration || item.description || '',
+        alternative_matches: item.alternative_matches || [],
         row: item.row || '',
         _source: 'unreconciled_matched'
       });
@@ -1642,6 +1699,7 @@ function buildSFActions(data) {
         date: item.date || item.value_date || '',
         match_method: item.match_method || item.method || '',
         narration: item.narration || item.description || '',
+        alternative_matches: item.alternative_matches || [],
         _source: 'matched'
       });
     }
@@ -1711,7 +1769,7 @@ function renderSFWorkflow() {
     html += '<td>' + escHtml(date) + '</td>';
     html += '<td>' + escHtml(quarter) + '</td>';
     html += '<td>' + sfWorkflowBadge(st) + '</td>';
-    html += '<td>' + sfWorkflowActions(txKey, st) + '</td>';
+    html += '<td>' + sfWorkflowActions(txKey, st, item) + '</td>';
     html += '</tr>';
   });
 
@@ -1734,13 +1792,33 @@ function sfWorkflowBadge(state) {
   return map[state] || '<span class="badge badge-dim">' + state + '</span>';
 }
 
-function sfWorkflowActions(unitNo, state) {
+function sfWorkflowActions(unitNo, state, item) {
   var safeUnit = escHtml(unitNo).replace(/'/g, "\\'");
   if (state === 'pending') {
-    return '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+    var html = '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
       '<button class="btn btn-success" style="padding:6px 14px;font-size:0.78rem;" onclick="confirmSFUnit(\'' + safeUnit + '\')">&#10003; Confirm</button>' +
       '<button class="btn btn-secondary" style="padding:6px 14px;font-size:0.78rem;border-color:var(--amber);color:var(--amber);" onclick="changeSFUnit(\'' + safeUnit + '\')">&#9998; Change</button>' +
       '</div>';
+
+    /* Show alternative matches for pending items */
+    var alts = (item && item.alternative_matches) || [];
+    if (alts.length > 0) {
+      html += '<div style="margin-top:6px; padding:4px 0;">' +
+        '<div style="font-size:0.68rem; color:var(--amber); margin-bottom:3px;">Alternatives:</div>';
+      alts.forEach(function(alt) {
+        var altConf = Math.round((alt.confidence || 0) * 100);
+        html +=
+          '<div style="display:inline-flex; align-items:center; gap:4px; background:rgba(255,255,255,0.04); ' +
+          'border:1px solid rgba(255,255,255,0.08); border-radius:4px; padding:2px 8px; margin:1px 3px 1px 0; font-size:0.68rem;">' +
+          '<span style="font-weight:600; color:#fff;">Unit ' + escHtml(alt.unit_no || '-') + '</span>' +
+          '<span style="color:var(--text-muted);">' + escHtml(alt.account_name || '') + '</span>' +
+          '<span style="color:var(--amber);">' + altConf + '%</span>' +
+          '</div>';
+      });
+      html += '</div>';
+    }
+
+    return html;
   }
   if (state === 'confirmed') {
     return '<span style="font-size:0.78rem;color:var(--blue);">Awaiting SF Update...</span>';
