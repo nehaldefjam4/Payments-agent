@@ -1726,6 +1726,7 @@ function sfWorkflowBadge(state) {
   var map = {
     'pending': '<span class="badge badge-amber"><span class="badge-dot badge-dot-amber"></span> Pending Review</span>',
     'confirmed': '<span class="badge badge-blue"><span class="badge-dot badge-dot-green"></span> Ready for SF Update</span>',
+    'queued': '<span class="badge badge-blue" style="background:rgba(59,130,246,0.15);"><span class="spinner" style="width:10px;height:10px;margin-right:4px;"></span> Claude AI Processing...</span>',
     'sf_updated': '<span class="badge badge-green"><span class="badge-dot badge-dot-green"></span> SF Updated</span>',
     'receipt_done': '<span class="badge badge-green"><span class="badge-dot badge-dot-green"></span> Receipt Generated</span>',
     'email_sent': '<span class="badge badge-green" style="background:var(--green-dim);color:var(--green);">&#10003; Complete</span>'
@@ -1743,6 +1744,9 @@ function sfWorkflowActions(unitNo, state) {
   }
   if (state === 'confirmed') {
     return '<span style="font-size:0.78rem;color:var(--blue);">Awaiting SF Update...</span>';
+  }
+  if (state === 'queued') {
+    return '<span style="font-size:0.78rem;color:var(--blue);"><span class="spinner" style="width:12px;height:12px;"></span> Claude AI working...</span>';
   }
   if (state === 'sf_updated') {
     return '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
@@ -1858,33 +1862,83 @@ function updateSalesforce() {
   })
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      /* Mark all confirmed as sf_updated */
+      var queued = data.queued || 0;
+      /* Mark confirmed as waiting_sf (Claude Cowork will process) */
       Object.keys(STATE.sfWorkflow).forEach(function(u) {
         if (STATE.sfWorkflow[u].state === 'confirmed') {
-          STATE.sfWorkflow[u].state = 'sf_updated';
+          STATE.sfWorkflow[u].state = 'queued';
         }
       });
-      btn.innerHTML = '&#9889; Update Salesforce';
+      btn.innerHTML = '&#9889; Queued for SF Update';
       btn.disabled = true;
-      document.getElementById('sfUpdateStatus').textContent = 'Salesforce updated successfully.';
-      document.getElementById('sfUpdateStatus').style.color = 'var(--green)';
+      document.getElementById('sfUpdateStatus').innerHTML =
+        '<div style="display:flex;align-items:center;gap:8px;">' +
+        '<span class="spinner"></span>' +
+        '<span>' + queued + ' unit(s) queued. Claude AI is processing via Salesforce browser automation...</span>' +
+        '</div>';
+      document.getElementById('sfUpdateStatus').style.color = 'var(--blue)';
       renderSFWorkflow();
-      showToast('Salesforce updated for ' + confirmedUnits.length + ' unit(s)', 'success');
+      showToast(queued + ' unit(s) queued for Salesforce update', 'success');
+
+      /* Start polling for completion */
+      startSFPolling();
     })
     .catch(function(err) {
-      /* Even on error, visually mark as updated for demo flow */
-      Object.keys(STATE.sfWorkflow).forEach(function(u) {
-        if (STATE.sfWorkflow[u].state === 'confirmed') {
-          STATE.sfWorkflow[u].state = 'sf_updated';
-        }
-      });
       btn.innerHTML = '&#9889; Update Salesforce';
-      btn.disabled = true;
-      document.getElementById('sfUpdateStatus').textContent = 'SF update simulated (endpoint may not exist yet).';
-      document.getElementById('sfUpdateStatus').style.color = 'var(--amber)';
-      renderSFWorkflow();
-      showToast('SF update simulated for ' + confirmedUnits.length + ' unit(s)', 'success');
+      btn.disabled = false;
+      document.getElementById('sfUpdateStatus').textContent = 'Error queuing: ' + err.message;
+      document.getElementById('sfUpdateStatus').style.color = 'var(--red)';
+      showToast('Error: ' + err.message, 'error');
     });
+}
+
+/* Poll for SF queue completion */
+function startSFPolling() {
+  if (STATE.sfPollTimer) clearInterval(STATE.sfPollTimer);
+  STATE.sfPollTimer = setInterval(function() {
+    fetch('/api/salesforce/pending')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var pending = data.pending || [];
+        var pendingCount = data.count || 0;
+
+        if (pendingCount === 0) {
+          /* All done! */
+          clearInterval(STATE.sfPollTimer);
+          STATE.sfPollTimer = null;
+
+          Object.keys(STATE.sfWorkflow).forEach(function(u) {
+            if (STATE.sfWorkflow[u].state === 'queued') {
+              STATE.sfWorkflow[u].state = 'sf_updated';
+            }
+          });
+
+          document.getElementById('sfUpdateStatus').innerHTML =
+            '<span style="color:var(--green);">&#10003; All Salesforce updates completed by Claude AI.</span>';
+          renderSFWorkflow();
+          showToast('All Salesforce updates completed!', 'success');
+          return;
+        }
+
+        /* Update status with progress */
+        var totalQueued = Object.keys(STATE.sfWorkflow).filter(function(u) {
+          return STATE.sfWorkflow[u].state === 'queued' || STATE.sfWorkflow[u].state === 'sf_updated';
+        }).length;
+        var completed = totalQueued - pendingCount;
+
+        document.getElementById('sfUpdateStatus').innerHTML =
+          '<div style="display:flex;align-items:center;gap:8px;">' +
+          '<span class="spinner"></span>' +
+          '<span>Claude AI processing: ' + completed + '/' + totalQueued + ' units done. ' + pendingCount + ' remaining...</span>' +
+          '</div>';
+
+        /* Mark completed units */
+        pending.forEach(function(p) {
+          /* These are still pending, do nothing */
+        });
+      })
+      .catch(function() { /* silently retry */ });
+  }, 5000); /* Poll every 5 seconds */
 }
 
 function generateReceipt(unitNo) {

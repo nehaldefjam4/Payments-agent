@@ -730,16 +730,85 @@ from agents.sf_browser_agent import plan_sf_automation
 
 @app.post("/api/salesforce/plan")
 async def sf_automation_plan(request: Request):
-    """Generate an SF browser automation plan for Claude Cowork execution.
+    """Save confirmed units to Supabase queue for Claude Cowork browser automation.
     Uses dual-app approach: fam app for payments, fam revamp for receipts/emails."""
     body = await request.json()
     needs_receipt = body.get("needs_receipt", [])
 
     if not needs_receipt:
-        return {"plan": None, "message": "No units need receipts"}
+        return {"plan": None, "message": "No units need receipts", "queued": 0}
 
+    # Save each unit to Supabase queue
+    sb = get_supabase()
+    queued = 0
+    if sb:
+        for item in needs_receipt:
+            unit_no = item.get("unit_no") or item.get("unit") or ""
+            if not unit_no:
+                continue
+            try:
+                sb.table("sf_action_queue").insert({
+                    "unit_no": str(unit_no),
+                    "amount": float(item.get("credit") or item.get("amount") or 0),
+                    "client_name": item.get("account_name") or item.get("client_name") or item.get("client") or "",
+                    "date": item.get("date") or item.get("value_date") or "",
+                    "narration": item.get("narration") or item.get("description") or "",
+                    "period": item.get("period") or "",
+                    "action_type": "update_payment",
+                    "status": "pending",
+                    "sf_app": "fam",
+                }).execute()
+                queued += 1
+            except Exception as e:
+                print(f"Failed to queue unit {unit_no}: {e}")
+
+    # Also generate the plan for reference
     plan = plan_sf_automation(needs_receipt)
+    plan["queued"] = queued
+    plan["message"] = f"{queued} unit(s) queued for Salesforce update. Claude Cowork will process them automatically."
     return plan
+
+
+@app.get("/api/salesforce/pending")
+async def sf_pending_actions():
+    """Check for pending SF actions in the queue. Used by Claude Cowork polling."""
+    sb = get_supabase()
+    if not sb:
+        return {"pending": [], "count": 0, "error": "Supabase not connected"}
+
+    try:
+        result = sb.table("sf_action_queue").select("*").eq("status", "pending").order("created_at").execute()
+        items = result.data or []
+        return {"pending": items, "count": len(items)}
+    except Exception as e:
+        return {"pending": [], "count": 0, "error": str(e)}
+
+
+@app.post("/api/salesforce/queue/{item_id}/status")
+async def sf_update_queue_status(item_id: str, request: Request):
+    """Update status of a queued SF action. Used by Claude Cowork after execution."""
+    body = await request.json()
+    new_status = body.get("status", "completed")
+    error_msg = body.get("error_message", "")
+
+    sb = get_supabase()
+    if not sb:
+        raise HTTPException(status_code=500, detail="Supabase not connected")
+
+    try:
+        update_data = {
+            "status": new_status,
+            "updated_at": "now()",
+        }
+        if new_status == "completed":
+            update_data["completed_at"] = "now()"
+        if error_msg:
+            update_data["error_message"] = error_msg
+
+        sb.table("sf_action_queue").update(update_data).eq("id", item_id).execute()
+        return {"success": True, "id": item_id, "status": new_status}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ===========================================================================
