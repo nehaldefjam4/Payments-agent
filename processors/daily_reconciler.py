@@ -629,13 +629,51 @@ class DailyReconciler:
                     self._normalize_name(name), tx.unit_no)
             return
 
-        # Method 3: IBAN/account matching from narration
-        iban = parser.extract_iban_from_description(tx.narration)
-        if iban:
-            # Check if we've seen this IBAN before with a unit
-            for ref, known_unit in self.kb_ref_to_unit.items():
-                # This is a simplistic check; in practice you'd track IBANs
+        # Method 3: IPP reference unit extraction
+        # IPP references like "ADC6B981204" may contain unit hints (last 3-4 digits)
+        if "IPP" in tx.narration.upper() and tx.reference:
+            ref_upper = tx.narration.upper() + " " + tx.reference.upper()
+            # Try extracting 3-digit numbers from the reference that match known units
+            ref_numbers = re.findall(r'(\d{3,4})', ref_upper)
+            for num in ref_numbers:
+                if num in self.kb_unit_to_name:
+                    tx.unit_no = num
+                    tx.match_confidence = 0.70
+                    tx.match_method = "ipp_reference_hint"
+                    names_list = self.kb_unit_to_name.get(num, [])
+                    tx.account_name = names_list[0] if names_list else ""
+                    return
+
+        # Method 4: Amount-based matching
+        # When no name/unit found, check if the exact amount matches a known installment
+        # pattern for any unit (installments are typically consistent per unit)
+        if tx.credit > 0:
+            # Build amount-to-unit map from previously matched transactions
+            amount_to_units = {}
+            for prev_tx in self.new_transactions:
+                if prev_tx.unit_no and prev_tx.credit > 0 and prev_tx != tx:
+                    amt_key = round(prev_tx.credit, 2)
+                    if amt_key not in amount_to_units:
+                        amount_to_units[amt_key] = set()
+                    amount_to_units[amt_key].add(prev_tx.unit_no)
+
+            # Also check historical amounts from KB (existing master sheet rows)
+            for ref, unit in self.kb_ref_to_unit.items():
+                # We don't have amounts in ref_to_unit, so skip this for now
                 pass
+
+            tx_amount = round(tx.credit, 2)
+            if tx_amount in amount_to_units:
+                matching_units = amount_to_units[tx_amount]
+                if len(matching_units) == 1:
+                    # Unique amount — only one unit has this installment amount
+                    matched_unit = list(matching_units)[0]
+                    tx.unit_no = matched_unit
+                    tx.match_confidence = 0.65
+                    tx.match_method = "amount_match"
+                    names_list = self.kb_unit_to_name.get(matched_unit, [])
+                    tx.account_name = names_list[0] if names_list else ""
+                    return
 
         # No match found
         tx.match_method = "unmatched"
