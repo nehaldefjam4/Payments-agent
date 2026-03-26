@@ -905,10 +905,22 @@ class DailyReconciler:
         if not unmatched:
             return []
 
-        # Build context for Claude
+        # Build context for Claude — include unit prices for amount-based matching
         kb_summary = []
         for unit, names in sorted(self.kb_unit_to_name.items()):
             kb_summary.append(f"  Unit {unit}: {', '.join(names)}")
+
+        # Build amount history per unit for AI to use in amount-based matching
+        amount_history = {}
+        for tx in self.new_transactions:
+            if tx.unit_no and tx.credit > 0:
+                if tx.unit_no not in amount_history:
+                    amount_history[tx.unit_no] = []
+                amount_history[tx.unit_no].append(tx.credit)
+
+        amount_context = []
+        for unit, amounts in sorted(amount_history.items()):
+            amount_context.append(f"  Unit {unit}: previous payments AED {', '.join(f'{a:,.2f}' for a in amounts)}")
 
         tx_list = []
         for i, tx in enumerate(unmatched):
@@ -923,8 +935,13 @@ class DailyReconciler:
 KNOWLEDGE BASE — Unit to Client Mappings:
 {chr(10).join(kb_summary[:150])}
 
+PAYMENT HISTORY (matched transactions so far):
+{chr(10).join(amount_context) if amount_context else '  No matched payments yet.'}
+
 UNMATCHED TRANSACTIONS:
 {chr(10).join(tx_list)}
+
+IMPORTANT: For IPP transactions, check if the reference number contains a unit number hint (e.g., "ADC6B981204" contains "204"). For blank narrations ("-"), use amount-based matching against known installment patterns.
 
 For each transaction, respond with a JSON array where each element has:
 - "index": transaction index from the list above
