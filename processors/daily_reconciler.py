@@ -509,6 +509,33 @@ class DailyReconciler:
                 alts.append(c)
             if len(alts) >= max_alts:
                 break
+
+        # If no fuzzy alternatives found, brute-force find units with ANY overlapping name token
+        # This ensures review items ALWAYS show alternatives
+        if not alts:
+            name_parts = set(p for p in normalized_name.split() if len(p) > 2)
+            scored = []
+            for kb_name, kb_units in self.kb_name_to_unit.items():
+                kb_unit = kb_units[0]
+                if kb_unit == chosen_unit or kb_unit in seen:
+                    continue
+                kb_parts = set(p for p in kb_name.split() if len(p) > 2)
+                overlap = len(name_parts & kb_parts)
+                if overlap > 0:
+                    score = overlap / max(len(name_parts), len(kb_parts))
+                    names_list = self.kb_unit_to_name.get(kb_unit, [""])
+                    scored.append({
+                        "unit_no": kb_unit,
+                        "account_name": names_list[0] if names_list else "",
+                        "confidence": round(score, 3),
+                        "method": "token_overlap",
+                    })
+            scored.sort(key=lambda x: x["confidence"], reverse=True)
+            for s in scored[:max_alts]:
+                if s["unit_no"] not in seen:
+                    seen.add(s["unit_no"])
+                    alts.append(s)
+
         return alts
 
     def _match_new_transaction(self, tx: NewTransaction, parser: BankStatementParser):
