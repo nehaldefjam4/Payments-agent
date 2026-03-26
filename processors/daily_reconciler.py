@@ -1007,24 +1007,53 @@ class DailyReconciler:
                 f"Extracted name: {tx.account_name or 'none'}"
             )
 
+        # Build rule-based context: show AI what the rule engine matched and HOW
+        rule_matched = [t for t in self.new_transactions if t.unit_no and t.credit > 0]
+        rule_context = []
+        for t in rule_matched[:20]:  # up to 20 examples
+            rule_context.append(
+                f"  Unit {t.unit_no} ({t.account_name}) <- {t.match_method} ({t.match_confidence:.0%}) | "
+                f"AED {t.credit:,.2f} | Narration: {t.narration[:80]}"
+            )
+
         prompt = f"""Analyze these unmatched bank transactions and match them to units.
 
 KNOWLEDGE BASE — Unit to Client Mappings:
 {chr(10).join(kb_summary[:150])}
 
-PAYMENT HISTORY (matched transactions so far):
-{chr(10).join(amount_context) if amount_context else '  No matched payments yet.'}
+PAYMENT HISTORY & INSTALLMENT PATTERNS:
+{chr(10).join(amount_context) if amount_context else '  No payment history yet.'}
 
-UNMATCHED TRANSACTIONS:
+RULE-BASED MATCHES (already matched by the engine — learn from these patterns):
+{chr(10).join(rule_context) if rule_context else '  No rule-based matches yet.'}
+
+UNMATCHED TRANSACTIONS (need your analysis):
 {chr(10).join(tx_list)}
 
-IMPORTANT: For IPP transactions, check if the reference number contains a unit number hint (e.g., "ADC6B981204" contains "204"). For blank narrations ("-"), use amount-based matching against known installment patterns.
+MATCHING RULES THE ENGINE USES (use same logic for your analysis):
+1. Unit number extraction: "CLEARINGUNIT 305" -> Unit 305
+2. Name from KB: exact normalized name match
+3. Name substring: KB name contained within narration name or vice versa
+4. Fuzzy name: Arabic name variants (MOHAMMED/MOHAMED/MUHAMMAD), surname matching
+5. Name in narration: KB name parts found scattered in narration text
+6. IPP reference hint: "ADC6B981204" may contain unit "204" in last 3-4 digits
+7. Amount matching: if a credit amount is unique to one unit's installment pattern, match it
+8. Noise word removal: MOSCOW, LONDON, DUBAI, BUILDING etc. are stripped from names
+
+IMPORTANT GUIDELINES:
+- Real estate installments are typically 12.5% of unit price per quarter (Q1-Q8)
+- Booking payment is ~20% of price, followed by 8 quarterly installments
+- If an amount EXACTLY matches a previously seen payment for a specific unit, it's likely the same unit's next installment
+- Company names paying on behalf: match by amount if the amount is unique to one unit
+- For blank narrations ("-"), ONLY use amount-based matching
+- Be aggressive in matching — err on the side of suggesting a match with clear reasoning rather than returning no match
+- Confidence 0.6+ required for a match to be applied
 
 For each transaction, respond with a JSON array where each element has:
 - "index": transaction index from the list above
 - "unit_no": matched unit number (string) or "" if no match
 - "confidence": 0.0 to 1.0
-- "reasoning": brief explanation
+- "reasoning": brief explanation of your logic
 - "match_method": "ai_name_match" or "ai_amount_match" or "ai_pattern" or "ai_no_match"
 
 Only return the JSON array, no other text."""
