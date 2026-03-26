@@ -679,6 +679,15 @@ class BankStatementParser:
         "FLOOR", "SUITE", "OFFICE", "BLOCK", "PLOT", "SECTOR", "AREA",
         "WALK", "YWALK", "MALL", "CENTER", "CENTRE", "GATE", "GARDENS",
         "RESIDENCE", "RESIDENCES", "VILLAGE", "SQUARE", "PLAZA", "HEIGHTS",
+        # Country/city names (appear after person names in international remittances)
+        "MOSCOW", "LONDON", "PARIS", "BERLIN", "ISTANBUL", "CAIRO", "RIYADH",
+        "JEDDAH", "MUMBAI", "DELHI", "KARACHI", "LAHORE", "BEIJING", "SHANGHAI",
+        "TOKYO", "CHICAGO", "NEW", "YORK", "ANGELES", "FRANCISCO",
+        "RUSSIA", "INDIA", "PAKISTAN", "CHINA", "JAPAN", "TURKEY", "EGYPT",
+        "JORDAN", "LEBANON", "IRAQ", "IRAN", "OMAN", "BAHRAIN", "QATAR", "KUWAIT",
+        "USA", "CANADA", "AUSTRALIA", "GERMANY", "FRANCE", "ITALY", "SPAIN",
+        "KINGDOM", "UNITED", "STATES", "REPUBLIC",
+        "FLAT", "APARTMENT", "HOUSE", "BOX",
         # Transaction noise
         "GOODS", "SERVICES", "BOUGH", "BOUGHT", "PURCHASED", "SOLD",
         "REF", "REFNO", "REMITTANCETT", "SDM", "CDC", "MOBILE", "BANKING",

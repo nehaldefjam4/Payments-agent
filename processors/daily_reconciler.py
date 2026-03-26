@@ -643,11 +643,20 @@ class DailyReconciler:
             return
 
         # Method 3: IPP reference unit extraction
-        # IPP references like "ADC6B981204" may contain unit hints (last 3-4 digits)
-        if "IPP" in tx.narration.upper() and tx.reference:
-            ref_upper = tx.narration.upper() + " " + tx.reference.upper()
-            # Try extracting 3-digit numbers from the reference that match known units
+        # IPP references like "ADC6B981204" may contain unit hints embedded in alphanumeric codes
+        if "IPP" in tx.narration.upper():
+            ref_upper = tx.narration.upper() + " " + (tx.reference or "").upper()
+            # Strategy 1: Direct 3-4 digit numbers
             ref_numbers = re.findall(r'(\d{3,4})', ref_upper)
+            # Strategy 2: Last 3 digits of longer numbers (e.g., "981204" -> try "204")
+            long_numbers = re.findall(r'(\d{5,})', ref_upper)
+            for ln in long_numbers:
+                ref_numbers.append(ln[-3:])   # last 3 digits
+                ref_numbers.append(ln[-4:])   # last 4 digits
+            # Strategy 3: Extract from alphanumeric codes (e.g., "ADC6B981204" -> "1204", "204")
+            alpha_nums = re.findall(r'[A-Z]+(\d{3,4})(?:\b|[A-Z])', ref_upper)
+            ref_numbers.extend(alpha_nums)
+
             for num in ref_numbers:
                 if num in self.kb_unit_to_name:
                     tx.unit_no = num
