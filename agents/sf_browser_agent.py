@@ -316,7 +316,7 @@ class SalesforceBrowserAgent:
         """
         plan = {
             "total_units": len(needs_receipt),
-            "dry_run": self.config.dry_run,
+            "mode": "live",
             "sf_base_url": self.config.sf_base_url,
             "units": [],
         }
