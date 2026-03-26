@@ -81,6 +81,79 @@ class DailyReconciler:
         self.new_transactions: list[NewTransaction] = []
         self.receipts_generated: list[dict] = []
 
+        # Salesforce KB enrichment (from Supabase project_kb tables)
+        self.sf_kb_units: dict[str, dict] = {}     # unit_no -> {purchaser_name, price, status, email, ...}
+        self.sf_kb_payments: dict[str, list] = {}   # unit_no -> [{payment_name, sub_total, status, ...}]
+        self.sf_kb_amount_to_unit: dict[float, str] = {}  # exact installment amount -> unit (for unique amounts)
+        self.project_name: str = ""
+
+    def load_sf_knowledge_base(self, project_name: str) -> dict:
+        """Load enriched KB from Supabase (previously scraped from Salesforce).
+        This gives us exact installment amounts, client emails, payment schedules."""
+        try:
+            from config.settings import SUPABASE_URL, SUPABASE_KEY
+            from supabase import create_client
+            sb = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+            self.project_name = project_name.upper()
+
+            # Load units
+            units_result = sb.table("project_kb").select("*").eq("project_name", self.project_name).execute()
+            for u in (units_result.data or []):
+                unit_no = u.get("unit_no", "")
+                if not unit_no:
+                    continue
+                self.sf_kb_units[unit_no] = u
+
+                # Enrich the main KB with SF data
+                name = u.get("purchaser_name", "")
+                if name:
+                    normalized = self._normalize_name(name)
+                    if normalized not in self.kb_name_to_unit:
+                        self.kb_name_to_unit[normalized] = []
+                    if unit_no not in self.kb_name_to_unit[normalized]:
+                        self.kb_name_to_unit[normalized].append(unit_no)
+                    if unit_no not in self.kb_unit_to_name:
+                        self.kb_unit_to_name[unit_no] = []
+                    if name not in self.kb_unit_to_name[unit_no]:
+                        self.kb_unit_to_name[unit_no].append(name)
+
+            # Load payments
+            payments_result = sb.table("project_kb_payments").select("*").eq("project_name", self.project_name).execute()
+            amount_counts: dict[float, list[str]] = {}
+            for p in (payments_result.data or []):
+                unit_no = p.get("unit_no", "")
+                if not unit_no:
+                    continue
+                if unit_no not in self.sf_kb_payments:
+                    self.sf_kb_payments[unit_no] = []
+                self.sf_kb_payments[unit_no].append(p)
+
+                # Track which amounts are unique to specific units
+                amt = float(p.get("sub_total", 0) or 0)
+                if amt > 0:
+                    if amt not in amount_counts:
+                        amount_counts[amt] = []
+                    if unit_no not in amount_counts[amt]:
+                        amount_counts[amt].append(unit_no)
+
+            # Build amount→unit map for unique installments
+            for amt, units in amount_counts.items():
+                if len(units) == 1:
+                    self.sf_kb_amount_to_unit[amt] = units[0]
+
+            return {
+                "project": self.project_name,
+                "sf_units": len(self.sf_kb_units),
+                "sf_payments": sum(len(v) for v in self.sf_kb_payments.values()),
+                "unique_amounts": len(self.sf_kb_amount_to_unit),
+                "total_kb_units": len(self.kb_unit_to_name),
+                "total_kb_names": len(self.kb_name_to_unit),
+            }
+        except Exception as e:
+            print(f"SF KB load failed (non-fatal): {e}")
+            return {"sf_units": 0, "sf_payments": 0, "error": str(e)}
+
     # =================================================================
     # STEP 1: Load master sheet and build knowledge base
     # =================================================================
@@ -699,10 +772,19 @@ class DailyReconciler:
                         amount_to_units[amt_key] = set()
                     amount_to_units[amt_key].add(prev_tx.unit_no)
 
-            # Also check historical amounts from KB (existing master sheet rows)
-            for ref, unit in self.kb_ref_to_unit.items():
-                # We don't have amounts in ref_to_unit, so skip this for now
-                pass
+            # Also check Salesforce KB for exact installment amounts
+            if self.sf_kb_amount_to_unit:
+                tx_amount_check = round(tx.credit, 2)
+                if tx_amount_check in self.sf_kb_amount_to_unit:
+                    sf_unit = self.sf_kb_amount_to_unit[tx_amount_check]
+                    tx.unit_no = sf_unit
+                    tx.match_confidence = 0.75
+                    tx.match_method = "sf_amount_match"
+                    names_list = self.kb_unit_to_name.get(sf_unit, [])
+                    tx.account_name = names_list[0] if names_list else ""
+                    tx.alternative_matches = self._collect_fuzzy_alternatives(
+                        self._normalize_name(tx.account_name), sf_unit) if tx.account_name else []
+                    return
 
             tx_amount = round(tx.credit, 2)
             if tx_amount in amount_to_units:

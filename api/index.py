@@ -153,9 +153,18 @@ async def reconcile_endpoint(
         # ── Step 2: Load master sheet → build knowledge base ──
         reconciler = DailyReconciler()
         master_stats = reconciler.load_master_sheet(master_path)
+
+        # Enrich KB with Salesforce data (if project KB exists in Supabase)
+        project_name = project if project != "auto" else "CENTURY"
+        sf_kb_stats = reconciler.load_sf_knowledge_base(project_name)
+        sf_enriched = sf_kb_stats.get("sf_units", 0)
+
+        kb_msg = f"Loaded knowledge base: {master_stats.get('units_known', 0)} units, {master_stats.get('names_known', 0)} client names"
+        if sf_enriched > 0:
+            kb_msg += f" + {sf_enriched} units from Salesforce KB ({sf_kb_stats.get('unique_amounts', 0)} unique installment amounts)"
         steps.append({
             "step": 2,
-            "action": f"Loaded knowledge base: {master_stats.get('units_known', 0)} units, {master_stats.get('names_known', 0)} client names",
+            "action": kb_msg,
             "status": "done",
         })
 
@@ -888,6 +897,107 @@ async def sf_test_clear_queue():
         return {"cleared": True}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ===========================================================================
+# PROJECT KNOWLEDGE BASE (pulled from Salesforce, stored in Supabase)
+# ===========================================================================
+
+@app.get("/api/project-kb/{project_name}")
+async def get_project_kb(project_name: str):
+    """Get the stored knowledge base for a project (units, payments, clients)."""
+    sb = get_supabase()
+    if not sb:
+        return {"units": [], "payments": [], "error": "Supabase not connected"}
+    try:
+        units = sb.table("project_kb").select("*").eq("project_name", project_name.upper()).execute()
+        payments = sb.table("project_kb_payments").select("*").eq("project_name", project_name.upper()).execute()
+        return {
+            "project": project_name.upper(),
+            "units": units.data or [],
+            "payments": payments.data or [],
+            "unit_count": len(units.data or []),
+            "payment_count": len(payments.data or []),
+        }
+    except Exception as e:
+        return {"units": [], "payments": [], "error": str(e)}
+
+
+@app.post("/api/project-kb/{project_name}/sync")
+async def sync_project_kb(project_name: str, request: Request):
+    """Save/update project KB data from Salesforce browser scrape.
+    Called by Claude Cowork after browsing SF inventory for a project."""
+    sb = get_supabase()
+    if not sb:
+        raise HTTPException(status_code=500, detail="Supabase not connected")
+
+    body = await request.json()
+    units = body.get("units", [])
+    payments = body.get("payments", [])
+    project = project_name.upper()
+
+    synced_units = 0
+    synced_payments = 0
+
+    for u in units:
+        try:
+            sb.table("project_kb").upsert({
+                "project_name": project,
+                "unit_no": str(u.get("unit_no", "")),
+                "unit_sf_id": u.get("sf_id", ""),
+                "purchaser_name": u.get("purchaser_name", ""),
+                "purchaser_email": u.get("purchaser_email", ""),
+                "purchaser_phone": u.get("purchaser_phone", ""),
+                "unit_price": float(u.get("price", 0)) if u.get("price") else None,
+                "unit_status": u.get("status", ""),
+                "building": u.get("building", ""),
+                "floor": u.get("floor", ""),
+                "bedroom": u.get("bedroom", ""),
+                "updated_at": "now()",
+            }, on_conflict="project_name,unit_no").execute()
+            synced_units += 1
+        except Exception as e:
+            print(f"Failed to sync unit {u.get('unit_no')}: {e}")
+
+    for p in payments:
+        try:
+            sb.table("project_kb_payments").insert({
+                "project_name": project,
+                "unit_no": str(p.get("unit_no", "")),
+                "payment_name": p.get("payment_name", ""),
+                "payment_sf_id": p.get("sf_id", ""),
+                "payment_description": p.get("description", ""),
+                "sub_total": float(p.get("sub_total", 0)) if p.get("sub_total") else None,
+                "amount_paid": float(p.get("amount_paid", 0)) if p.get("amount_paid") else None,
+                "remaining": float(p.get("remaining", 0)) if p.get("remaining") else None,
+                "due_date": p.get("due_date", ""),
+                "status": p.get("status", ""),
+                "payment_type": p.get("payment_type", ""),
+                "updated_at": "now()",
+            }).execute()
+            synced_payments += 1
+        except Exception as e:
+            print(f"Failed to sync payment {p.get('payment_name')}: {e}")
+
+    return {
+        "project": project,
+        "synced_units": synced_units,
+        "synced_payments": synced_payments,
+    }
+
+
+@app.get("/api/project-kb/list")
+async def list_project_kbs():
+    """List all projects that have KB data."""
+    sb = get_supabase()
+    if not sb:
+        return {"projects": []}
+    try:
+        result = sb.table("project_kb").select("project_name").execute()
+        projects = list(set(r["project_name"] for r in (result.data or [])))
+        return {"projects": sorted(projects)}
+    except Exception as e:
+        return {"projects": [], "error": str(e)}
 
 
 # ===========================================================================
