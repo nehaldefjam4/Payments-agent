@@ -681,8 +681,11 @@ class DailyReconciler:
             exact_score = exact_matches / max(len(significant_parts), len(kb_parts))
 
             # Phase 2: Last name (surname) must match for high confidence
+            # Check both exact and variant match for surname
             last_name = significant_parts[-1] if significant_parts else ""
-            last_name_matches = last_name in kb_parts
+            last_name_matches = last_name in kb_parts or any(
+                self._is_variant(last_name, kp) for kp in kb_parts
+            )
 
             # Phase 3: Variant-aware matching (only for first/middle names)
             variant_matches = 0
