@@ -960,7 +960,7 @@ class DailyReconciler:
         """
         from config.settings import ANTHROPIC_API_KEY, CLAUDE_MODEL, CLAUDE_MAX_TOKENS, AI_MATCHING_PROMPT
 
-        key = api_key or os.environ.get("ANTHROPIC_API_KEY", ANTHROPIC_API_KEY)
+        key = api_key or os.environ.get("ANTHROPIC_API_KEY", "") or ANTHROPIC_API_KEY
         if not key or not HAS_ANTHROPIC:
             return []
 
@@ -981,9 +981,23 @@ class DailyReconciler:
                     amount_history[tx.unit_no] = []
                 amount_history[tx.unit_no].append(tx.credit)
 
+        # Also include amounts from master sheet (existing transactions)
+        for ref, unit in self.kb_ref_to_unit.items():
+            # We don't store amounts in ref_to_unit, but we can note the unit exists
+            if unit not in amount_history:
+                amount_history[unit] = []
+
         amount_context = []
         for unit, amounts in sorted(amount_history.items()):
-            amount_context.append(f"  Unit {unit}: previous payments AED {', '.join(f'{a:,.2f}' for a in amounts)}")
+            names = self.kb_unit_to_name.get(unit, ["Unknown"])
+            if amounts:
+                # Calculate likely installment: booking is typically largest, Q payments are smaller
+                booking = max(amounts) if amounts else 0
+                q_payments = [a for a in amounts if a < booking * 0.5] if booking else []
+                typical_q = q_payments[0] if q_payments else round(booking * 0.125, 2)
+                amount_context.append(f"  Unit {unit} ({names[0]}): payments={', '.join(f'AED {a:,.2f}' for a in amounts)} | likely Q installment=AED {typical_q:,.2f}")
+            else:
+                amount_context.append(f"  Unit {unit} ({names[0]}): no payment history yet")
 
         tx_list = []
         for i, tx in enumerate(unmatched):
