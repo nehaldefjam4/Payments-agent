@@ -1134,10 +1134,10 @@ function processResult(data) {
     console.log('[PaymentsAgent] processResult data:', JSON.stringify({file_mode: data.file_mode, matched: (data.matching||{}).matched, matched_details_len: (data.matched_details||[]).length, needs_receipt_len: (data.needs_receipt||[]).length}));
     showResults(data);
     buildTransactions(data);
-    updateDashboard(data);
+    try { updateDashboard(data); } catch(e) { console.error('[PaymentsAgent] updateDashboard error:', e); }
 
     /* Always build SF actions log (shows matching results) */
-    buildSFActions(data);
+    try { buildSFActions(data); } catch(e) { console.error('[PaymentsAgent] buildSFActions error:', e); }
 
     /* Corporate-only mode: hide SF workflow section, show message */
     var sfTabBtn = document.querySelector('[data-tab="salesforce"]');
@@ -1537,28 +1537,39 @@ function buildSFActions(data) {
     });
   });
 
-  /* Add reconciliation-level entries */
+  /* Add reconciliation-level entries from ALL sources */
   var m = data.matching || {};
   var needsReceipt = data.needs_receipt || [];
   var matchedDetails = data.matched_details || [];
   var unrecMatched = (data.unreconciled || {}).matched_details || [];
 
-  if (m.matched > 0) {
-    logEntries.push({ icon: '&#10003;', iconCls: 'write', title: 'Matching Complete', detail: m.matched + ' transactions matched, ' + (m.unmatched || 0) + ' unmatched' });
+  /* Also use already-built transactions from STATE as fallback */
+  var allMatchedTx = STATE.allTransactions ? STATE.allTransactions.filter(function(t) {
+    return t._status === 'matched' || t._status === 'needs_receipt';
+  }) : [];
+
+  if (m.matched > 0 || allMatchedTx.length > 0) {
+    var totalMatched = m.matched || allMatchedTx.length || 0;
+    logEntries.push({ icon: '&#10003;', iconCls: 'write', title: 'Matching Complete', detail: totalMatched + ' transactions matched, ' + (m.unmatched || 0) + ' unmatched' });
   }
   if (needsReceipt.length > 0) {
     logEntries.push({ icon: '&#128196;', iconCls: 'read', title: 'Receipts Needed', detail: needsReceipt.length + ' unit(s) need receipt generation' });
   }
-  if (matchedDetails.length > 0) {
-    matchedDetails.forEach(function(md) {
-      logEntries.push({ icon: '&#128279;', iconCls: 'write', title: 'Unit ' + (md.unit_no || md.unit || '?'), detail: 'Matched — ' + escHtml(md.account_name || md.client_name || md.client || '') + ' — AED ' + formatAmount(md.credit || md.amount || 0) });
+
+  /* Use matched_details from API first, fallback to transactions from STATE */
+  var detailSource = matchedDetails.length > 0 ? matchedDetails : (unrecMatched.length > 0 ? unrecMatched : allMatchedTx);
+  detailSource.forEach(function(md) {
+    var unitNo = md.unit_no || md.unit || '?';
+    var clientName = md.account_name || md.client_name || md.client || '';
+    var amount = md.credit || md.amount || 0;
+    var isUnrec = md._source === 'unreconciled_matched';
+    logEntries.push({
+      icon: isUnrec ? '&#128260;' : '&#128279;',
+      iconCls: 'write',
+      title: 'Unit ' + unitNo + (isUnrec ? ' (prev unreconciled)' : ''),
+      detail: 'Matched — ' + escHtml(clientName) + ' — AED ' + formatAmount(amount)
     });
-  }
-  if (unrecMatched.length > 0) {
-    unrecMatched.forEach(function(md) {
-      logEntries.push({ icon: '&#128260;', iconCls: 'write', title: 'Unit ' + (md.unit_no || md.unit || '?') + ' (prev unreconciled)', detail: 'Now matched — ' + escHtml(md.account_name || md.client_name || '') });
-    });
-  }
+  });
 
   console.log('[PaymentsAgent] SF log entries built:', logEntries.length, 'matched:', m.matched, 'matchedDetails:', matchedDetails.length, 'needsReceipt:', needsReceipt.length, 'unrecMatched:', unrecMatched.length);
 
@@ -1986,9 +1997,7 @@ function updateDashboard(data) {
   document.getElementById('dsMatched').textContent = m.matched || 0;
   /* c) Unmatched */
   document.getElementById('dsUnmatched').textContent = m.unmatched || 0;
-  /* d) AI Matched */
-  document.getElementById('dsAIMatched').textContent = ai.ai_matched_count || 0;
-  /* e) Needs Receipt */
+  /* d) Needs Receipt */
   document.getElementById('dsReceipts').textContent = needsReceipt.length || 0;
 
   /* f) Method breakdown chart with ALL method labels */
