@@ -1519,28 +1519,53 @@ function buildSFActions(data) {
 
   /* Safety badges removed — production mode */
 
-  if (!STATE.sfActions.length) {
-    log.innerHTML =
-      '<div class="empty-state" style="padding:30px;"><div class="empty-state-text">' +
-      (sf.status && sf.status.connected ? 'No SF actions were taken during this run.' : 'Salesforce not connected.') +
-      '</div></div>';
+  /* Build a live activity log from both API actions + pending workflow units */
+  var logEntries = [];
+
+  /* Add any API-level SF actions */
+  STATE.sfActions.forEach(function(a) {
+    logEntries.push({
+      icon: (a.action_type === 'write' || a.type === 'update') ? '&#9998;' : ((a.type === 'skip' || a.action_type === 'skip') ? '&#8212;' : '&#128269;'),
+      iconCls: (a.action_type === 'write' || a.type === 'update') ? 'write' : ((a.type === 'skip' || a.action_type === 'skip') ? 'skip' : 'read'),
+      title: a.unit || a.unit_name || a.action || '-',
+      detail: a.detail || a.description || a.message || ''
+    });
+  });
+
+  /* Add reconciliation-level entries */
+  var m = data.matching || {};
+  var needsReceipt = data.needs_receipt || [];
+  var matchedDetails = data.matched_details || [];
+  var unrecMatched = (data.unreconciled || {}).matched_details || [];
+
+  if (m.matched > 0) {
+    logEntries.push({ icon: '&#10003;', iconCls: 'write', title: 'Matching Complete', detail: m.matched + ' transactions matched, ' + (m.unmatched || 0) + ' unmatched' });
+  }
+  if (needsReceipt.length > 0) {
+    logEntries.push({ icon: '&#128196;', iconCls: 'read', title: 'Receipts Needed', detail: needsReceipt.length + ' unit(s) need receipt generation' });
+  }
+  if (matchedDetails.length > 0) {
+    matchedDetails.forEach(function(md) {
+      logEntries.push({ icon: '&#128279;', iconCls: 'write', title: 'Unit ' + (md.unit_no || md.unit || '?'), detail: 'Matched — ' + escHtml(md.account_name || md.client_name || md.client || '') + ' — AED ' + formatAmount(md.credit || md.amount || 0) });
+    });
+  }
+  if (unrecMatched.length > 0) {
+    unrecMatched.forEach(function(md) {
+      logEntries.push({ icon: '&#128260;', iconCls: 'write', title: 'Unit ' + (md.unit_no || md.unit || '?') + ' (prev unreconciled)', detail: 'Now matched — ' + escHtml(md.account_name || md.client_name || '') });
+    });
+  }
+
+  if (!logEntries.length) {
+    log.innerHTML = '<div class="empty-state" style="padding:30px;"><div class="empty-state-text">No actions to display. Run reconciliation first.</div></div>';
   } else {
     var html = '';
-    STATE.sfActions.forEach(function(a) {
-      var iconCls = (a.action_type === 'write' || a.type === 'update') ? 'write' : ((a.type === 'skip' || a.action_type === 'skip') ? 'skip' : 'read');
-      var icon = iconCls === 'write' ? '&#9998;' : (iconCls === 'read' ? '&#128269;' : '&#8212;');
-      var detail = a.detail || a.description || a.message || '';
-      if (!detail && typeof a === 'object') {
-        var aClone = Object.assign({}, a);
-        delete aClone.unit; delete aClone.unit_name; delete aClone.action_type; delete aClone.type;
-        detail = JSON.stringify(aClone);
-      }
+    logEntries.forEach(function(e) {
       html +=
         '<div class="sf-action-item">' +
-        '<div class="sf-action-icon ' + iconCls + '">' + icon + '</div>' +
+        '<div class="sf-action-icon ' + e.iconCls + '">' + e.icon + '</div>' +
         '<div>' +
-        '<div style="font-weight:600; color:#fff;">' + escHtml(a.unit || a.unit_name || a.action || '-') + '</div>' +
-        '<div style="color:var(--text-muted);">' + escHtml(detail) + '</div>' +
+        '<div style="font-weight:600; color:#fff;">' + escHtml(e.title) + '</div>' +
+        '<div style="color:var(--text-muted);">' + escHtml(e.detail) + '</div>' +
         '</div></div>';
     });
     log.innerHTML = html;
