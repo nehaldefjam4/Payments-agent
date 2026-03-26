@@ -1420,7 +1420,8 @@ function renderTransactions(txs) {
     html += '<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escHtml(narration) + '">' + escHtml(narration);
 
     /* Alternative matches toggle button */
-    var hasAlts = (t._alternatives || []).length > 0 && (t._status === 'review' || t._status === 'unmatched' || conf < 80);
+    var isFuzzy = (t._method || '').toLowerCase().indexOf('fuzzy') >= 0;
+    var hasAlts = (t._alternatives || []).length > 0 && (t._status === 'review' || t._status === 'unmatched' || conf <= 85 || isFuzzy);
     if (hasAlts) {
       html +=
         '<br><button class="alt-toggle-btn" onclick="toggleAltMatches(' + idx + ')" style="' +
