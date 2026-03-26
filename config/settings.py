@@ -7,7 +7,7 @@ All Dubai real estate document requirements, validation rules, and approval thre
 # ANTHROPIC API
 # =============================================================================
 import os
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "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")
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "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")
 CLAUDE_MODEL = "claude-sonnet-4-20250514"
 CLAUDE_MAX_TOKENS = 4096          # Max tokens per Claude response in the agentic loop
 AGENT_MAX_TURNS = 15              # Safety limit: max tool-use round-trips
