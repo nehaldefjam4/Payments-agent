@@ -465,6 +465,14 @@ class DailyReconciler:
             if is_existing:
                 continue
 
+            # Skip debit-only transactions (bank charges, fees, etc.)
+            if tx.credit <= 0 and tx.debit > 0:
+                continue
+
+            # Skip transactions with no credit amount (non-payment entries)
+            if tx.credit <= 0:
+                continue
+
             # This is a NEW transaction
             new_tx = NewTransaction(
                 account=account_type,

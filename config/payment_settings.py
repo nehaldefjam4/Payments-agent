@@ -352,4 +352,13 @@ NAME_VARIANTS = {
     "MAJID": ["MAJED", "MAGED"],
     "HAMAD": ["HAMMAD", "HAMID"],
     "FAISAL": ["FAIZEL", "FAYSAL"],
+    # Russian name variants (patronymic endings)
+    "PETROVA": ["PETROVNA", "PETROV"],
+    "IVANOVA": ["IVANOVNA", "IVANOV"],
+    "SMIRNOVA": ["SMIRNOVNA", "SMIRNOV"],
+    "KUZNETSOVA": ["KUZNETSOVNA", "KUZNETSOV"],
+    # Common international variants
+    "JOHNSON": ["JONSON", "JOHNSEN"],
+    "WILSON": ["WILLSON"],
+    "THOMAS": ["TOMAS"],
 }

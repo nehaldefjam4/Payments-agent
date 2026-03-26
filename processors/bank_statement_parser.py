@@ -653,7 +653,8 @@ class BankStatementParser:
                 unit = match.group(1)
                 try:
                     unit_num = int(unit)
-                    if 200 <= unit_num <= 1899:
+                    # Valid unit range: 100-1999 (covers all projects)
+                    if 100 <= unit_num <= 1999:
                         return (unit, base_confidence)
                 except ValueError:
                     pass
