@@ -193,6 +193,11 @@ class DailyReconciler:
                 unit, conf = parser.extract_unit_from_description(narr)
                 if unit and conf >= 0.80:
                     match_method = "unit_in_narration"
+                    # Still collect name-based alternatives
+                    extracted_name = parser.extract_name_from_description(narr)
+                    if extracted_name and len(extracted_name) > 3:
+                        alt_matches = self._collect_fuzzy_alternatives(
+                            self._normalize_name(extracted_name), unit)
                 else:
                     unit = ""
                     conf = 0.0
@@ -235,23 +240,11 @@ class DailyReconciler:
                         unit = best_unit
                         conf = round(min(0.80, best_score * 0.85), 2)
                         match_method = "name_fuzzy"
-                        # top 3 alternatives excluding chosen
-                        seen = {best_unit}
-                        for c in all_candidates:
-                            if c["unit_no"] not in seen:
-                                seen.add(c["unit_no"])
-                                alt_matches.append(c)
-                            if len(alt_matches) >= 3:
-                                break
+                        # Use _collect_fuzzy_alternatives which has brute-force fallback
+                        alt_matches = self._collect_fuzzy_alternatives(normalized, best_unit)
                     elif all_candidates:
                         # Unmatched but still provide alternatives
-                        seen = set()
-                        for c in all_candidates:
-                            if c["unit_no"] not in seen:
-                                seen.add(c["unit_no"])
-                                alt_matches.append(c)
-                            if len(alt_matches) >= 3:
-                                break
+                        alt_matches = self._collect_fuzzy_alternatives(normalized, "")
 
                 # Method 4: Direct narration scan against KB names (FIX 2: scored approach)
                 if not unit:
@@ -1308,4 +1301,3 @@ Only return the JSON array, no other text."""
             except ValueError:
                 continue
         return None
-// cache bust 1774523506
