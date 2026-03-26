@@ -71,8 +71,8 @@ class DailyReconciler:
         # Knowledge base built from master sheet
         self.kb_ref_to_unit: dict[str, str] = {}       # transaction_ref -> unit
         self.kb_ref_to_name: dict[str, str] = {}       # transaction_ref -> client name
-        self.kb_name_to_unit: dict[str, str] = {}       # normalized_name -> unit
-        self.kb_unit_to_name: dict[str, str] = {}       # unit -> client name
+        self.kb_name_to_unit: dict[str, list[str]] = {}   # normalized_name -> [unit, ...]
+        self.kb_unit_to_name: dict[str, list[str]] = {}  # unit -> [client name, ...]
         self.existing_refs_escrow: set[str] = set()     # refs already in escrow sheet
         self.existing_refs_corporate: set[str] = set()  # refs already in corporate sheet
         self.latest_date_escrow: datetime = None        # latest date in escrow sheet
@@ -204,26 +204,34 @@ class DailyReconciler:
                         normalized = self._normalize_name(name)
                         # Exact KB match
                         if normalized in self.kb_name_to_unit:
-                            unit = self.kb_name_to_unit[normalized]
+                            unit = self.kb_name_to_unit[normalized][0]
                             conf = 0.85
                             match_method = "name_from_kb"
                             alt_matches = self._collect_fuzzy_alternatives(normalized, unit)
                         else:
-                            # Substring match
-                            for kb_name, kb_unit in self.kb_name_to_unit.items():
+                            # FIX 1: Best-match substring (collect ALL, pick best overlap)
+                            best_sub_unit = ""
+                            best_sub_ratio = 0.0
+                            for kb_name, kb_units in self.kb_name_to_unit.items():
                                 if len(normalized) > 5 and len(kb_name) > 5:
                                     if normalized in kb_name or kb_name in normalized:
-                                        unit = kb_unit
-                                        conf = 0.82
-                                        match_method = "name_substring"
-                                        alt_matches = self._collect_fuzzy_alternatives(normalized, unit)
-                                        break
+                                        overlap = min(len(normalized), len(kb_name))
+                                        total = max(len(normalized), len(kb_name))
+                                        ratio = overlap / total if total > 0 else 0
+                                        if ratio > best_sub_ratio:
+                                            best_sub_ratio = ratio
+                                            best_sub_unit = kb_units[0]
+                            if best_sub_unit:
+                                unit = best_sub_unit
+                                conf = 0.82
+                                match_method = "name_substring"
+                                alt_matches = self._collect_fuzzy_alternatives(normalized, unit)
 
                 # Method 3: Fuzzy name match with Arabic variants
                 if not unit and name and len(name) > 3:
                     normalized = self._normalize_name(name)
                     best_unit, best_score, all_candidates = self._fuzzy_name_match(normalized, return_all=True)
-                    if best_unit and best_score >= 0.4:
+                    if best_unit and best_score >= 0.55:
                         unit = best_unit
                         conf = round(min(0.80, best_score * 0.85), 2)
                         match_method = "name_fuzzy"
@@ -245,33 +253,44 @@ class DailyReconciler:
                             if len(alt_matches) >= 3:
                                 break
 
-                # Method 4: Direct narration scan against KB names
+                # Method 4: Direct narration scan against KB names (FIX 2: scored approach)
                 if not unit:
                     narr_upper = narr.upper()
-                    for kb_name, kb_unit in self.kb_name_to_unit.items():
+                    best_narr_unit = ""
+                    best_narr_score = 0.0
+                    best_narr_kb_name = ""
+                    for kb_name, kb_units in self.kb_name_to_unit.items():
                         parts = [p for p in kb_name.split() if len(p) > 2]
                         if len(parts) < 2:
                             continue
                         last = parts[-1]
                         if last in narr_upper and any(p in narr_upper for p in parts[:-1]):
-                            unit = kb_unit
-                            conf = 0.75
-                            match_method = "name_in_narration"
-                            name = self.kb_unit_to_name.get(kb_unit, "")
-                            if name and len(name) > 3:
-                                alt_matches = self._collect_fuzzy_alternatives(
-                                    self._normalize_name(name), unit)
-                            break
+                            matching_parts = sum(1 for p in parts if p in narr_upper)
+                            score = matching_parts / len(parts)
+                            if score > best_narr_score:
+                                best_narr_score = score
+                                best_narr_unit = kb_units[0]
+                                best_narr_kb_name = kb_name
+                    if best_narr_unit:
+                        unit = best_narr_unit
+                        conf = 0.75
+                        match_method = "name_in_narration"
+                        names_list = self.kb_unit_to_name.get(best_narr_unit, [])
+                        name = names_list[0] if names_list else ""
+                        if name and len(name) > 3:
+                            alt_matches = self._collect_fuzzy_alternatives(
+                                self._normalize_name(name), unit)
 
                 if not name and unit:
-                    name = self.kb_unit_to_name.get(unit, "")
+                    names_list = self.kb_unit_to_name.get(unit, [])
+                    name = names_list[0] if names_list else ""
 
                 self._unreconciled_rows.append({
                     "row": r,
                     "sheet": sheet_name,
                     "account": acct_type,
                     "date": str(date_val) if date_val else "",
-                    "narration": narr[:80],
+                    "narration": narr[:200],
                     "credit": credit_float,
                     "unit_no": unit,
                     "account_name": name or "",
@@ -342,10 +361,17 @@ class DailyReconciler:
                 self.kb_ref_to_unit[ref] = unit
                 if name:
                     self.kb_ref_to_name[ref] = name
-                    self.kb_unit_to_name[unit] = name
+                    # Append to list (don't overwrite)
+                    if unit not in self.kb_unit_to_name:
+                        self.kb_unit_to_name[unit] = []
+                    if name not in self.kb_unit_to_name[unit]:
+                        self.kb_unit_to_name[unit].append(name)
                     normalized = self._normalize_name(name)
                     if len(normalized) > 3:
-                        self.kb_name_to_unit[normalized] = unit
+                        if normalized not in self.kb_name_to_unit:
+                            self.kb_name_to_unit[normalized] = []
+                        if unit not in self.kb_name_to_unit[normalized]:
+                            self.kb_name_to_unit[normalized].append(unit)
 
         return rows_loaded
 
@@ -364,10 +390,16 @@ class DailyReconciler:
                 unit = m.group(1)
                 name = m.group(2).strip()
                 if unit and name:
-                    self.kb_unit_to_name[unit] = name
+                    if unit not in self.kb_unit_to_name:
+                        self.kb_unit_to_name[unit] = []
+                    if name not in self.kb_unit_to_name[unit]:
+                        self.kb_unit_to_name[unit].append(name)
                     normalized = self._normalize_name(name)
                     if len(normalized) > 3:
-                        self.kb_name_to_unit[normalized] = unit
+                        if normalized not in self.kb_name_to_unit:
+                            self.kb_name_to_unit[normalized] = []
+                        if unit not in self.kb_name_to_unit[normalized]:
+                            self.kb_name_to_unit[normalized].append(unit)
                     if ref:
                         self.kb_ref_to_unit[str(ref).strip()] = unit
                         self.kb_ref_to_name[str(ref).strip()] = name
@@ -438,7 +470,7 @@ class DailyReconciler:
                 account=account_type,
                 date=tx.date,
                 value_date=tx.value_date,
-                narration=tx.description[:80],
+                narration=tx.description[:200],
                 reference=ref,
                 debit=tx.debit,
                 credit=tx.credit,
@@ -474,7 +506,10 @@ class DailyReconciler:
     def _match_new_transaction(self, tx: NewTransaction, parser: BankStatementParser):
         """Match a new transaction to a unit using all available methods.
         For low-confidence or fuzzy matches, also populates alternative_matches
-        with the top 3 runner-up candidates."""
+        with the top 3 runner-up candidates.
+
+        FIX 8: After collecting all candidates (substring, fuzzy, narration),
+        a candidate matching more name parts always beats one matching fewer parts."""
 
         # Method 1: Unit number in narration
         unit, conf = parser.extract_unit_from_description(tx.narration)
@@ -483,55 +518,52 @@ class DailyReconciler:
             tx.match_confidence = conf
             tx.match_method = "unit_in_narration"
             # Look up name from knowledge base
-            tx.account_name = self.kb_unit_to_name.get(unit, "")
+            names_list = self.kb_unit_to_name.get(unit, [])
+            tx.account_name = names_list[0] if names_list else ""
             return
+
+        # Collect all candidates from multiple methods, then pick the best (FIX 8)
+        candidates = []  # list of (unit, conf, method, name, matched_parts, total_parts)
 
         # Method 2: Name in narration -> match to known unit
         name = parser.extract_name_from_description(tx.narration)
         if name and len(name) > 3:
             normalized = self._normalize_name(name)
+            norm_parts = [p for p in normalized.split() if len(p) > 2]
 
             # Exact KB match
             if normalized in self.kb_name_to_unit:
-                tx.unit_no = self.kb_name_to_unit[normalized]
-                tx.account_name = name
-                tx.match_confidence = 0.85
-                tx.match_method = "name_from_kb"
-                # Still collect alternatives for non-high-confidence matches
-                tx.alternative_matches = self._collect_fuzzy_alternatives(normalized, tx.unit_no)
-                return
+                kb_unit = self.kb_name_to_unit[normalized][0]
+                candidates.append((kb_unit, 0.85, "name_from_kb", name, len(norm_parts), len(norm_parts)))
 
-            # Partial KB match: check if extracted name is a substring of any KB name or vice versa
-            for kb_name, kb_unit in self.kb_name_to_unit.items():
+            # FIX 1: Best-match substring (collect ALL, pick best overlap)
+            for kb_name, kb_units in self.kb_name_to_unit.items():
                 if len(normalized) > 5 and len(kb_name) > 5:
                     if normalized in kb_name or kb_name in normalized:
-                        tx.unit_no = kb_unit
-                        tx.account_name = name
-                        tx.match_confidence = 0.82
-                        tx.match_method = "name_substring"
-                        tx.alternative_matches = self._collect_fuzzy_alternatives(normalized, tx.unit_no)
-                        return
+                        overlap = min(len(normalized), len(kb_name))
+                        total = max(len(normalized), len(kb_name))
+                        ratio = overlap / total if total > 0 else 0
+                        kb_parts = [p for p in kb_name.split() if len(p) > 2]
+                        matched_p = sum(1 for p in norm_parts if p in kb_parts)
+                        candidates.append((kb_units[0], 0.82 * ratio / 0.5 if ratio < 0.5 else 0.82,
+                                           "name_substring", name, matched_p, max(len(norm_parts), len(kb_parts))))
 
-            # Fuzzy name match (improved with Arabic variants)
+            # Fuzzy name match (improved with Arabic variants) - FIX 4: threshold 0.55
             best_unit, best_score, all_candidates = self._fuzzy_name_match(normalized, return_all=True)
-            if best_unit and best_score >= 0.4:
-                tx.unit_no = best_unit
-                tx.account_name = name
-                tx.match_confidence = round(min(0.80, best_score * 0.85), 2)
-                tx.match_method = "name_fuzzy"
-                # Store top 3 alternatives (excluding chosen match)
-                seen = {best_unit}
-                alts = []
-                for c in all_candidates:
-                    if c["unit_no"] not in seen:
-                        seen.add(c["unit_no"])
-                        alts.append(c)
-                    if len(alts) >= 3:
+            if best_unit and best_score >= 0.55:
+                # Count matched parts for this candidate
+                best_kb_name = ""
+                for kn in self.kb_name_to_unit:
+                    if self.kb_name_to_unit[kn][0] == best_unit:
+                        best_kb_name = kn
                         break
-                tx.alternative_matches = alts
-                return
+                kb_parts = [p for p in best_kb_name.split() if len(p) > 2] if best_kb_name else []
+                matched_p = sum(1 for p in norm_parts if any(
+                    p == kp or self._is_variant(p, kp) for kp in kb_parts)) if kb_parts else 0
+                candidates.append((best_unit, round(min(0.80, best_score * 0.85), 2),
+                                   "name_fuzzy", name, matched_p, max(len(norm_parts), len(kb_parts)) if kb_parts else len(norm_parts)))
 
-            # Store the extracted name even if no unit match
+            # Store extracted name even if no match yet
             tx.account_name = name
             # For unmatched, still provide fuzzy alternatives if any exist
             if all_candidates:
@@ -545,25 +577,49 @@ class DailyReconciler:
                         break
                 tx.alternative_matches = alts
 
-        # Method 2b: Direct narration scan — search all KB names in the narration
+        # Method 2b: Direct narration scan (FIX 2: scored approach)
         narr_upper = tx.narration.upper()
-        for kb_name, kb_unit in self.kb_name_to_unit.items():
-            # Only try names with at least 2 significant parts
+        best_narr_unit = ""
+        best_narr_score = 0.0
+        best_narr_parts_matched = 0
+        best_narr_total_parts = 0
+        best_narr_kb_name = ""
+        for kb_name, kb_units in self.kb_name_to_unit.items():
             parts = [p for p in kb_name.split() if len(p) > 2]
             if len(parts) < 2:
                 continue
-            # Check if last name (most distinctive) + any other part appears in narration
             last = parts[-1]
             if last in narr_upper and any(p in narr_upper for p in parts[:-1]):
-                tx.unit_no = kb_unit
-                tx.account_name = self.kb_unit_to_name.get(kb_unit, kb_name)
-                tx.match_confidence = 0.75
-                tx.match_method = "name_in_narration"
-                # Collect alternatives from fuzzy matching on the extracted name
-                if name and len(name) > 3:
-                    tx.alternative_matches = self._collect_fuzzy_alternatives(
-                        self._normalize_name(name), tx.unit_no)
-                return
+                matching_parts = sum(1 for p in parts if p in narr_upper)
+                score = matching_parts / len(parts)
+                if score > best_narr_score:
+                    best_narr_score = score
+                    best_narr_unit = kb_units[0]
+                    best_narr_kb_name = kb_name
+                    best_narr_parts_matched = matching_parts
+                    best_narr_total_parts = len(parts)
+        if best_narr_unit:
+            candidates.append((best_narr_unit, 0.75, "name_in_narration",
+                               name or "", best_narr_parts_matched, best_narr_total_parts))
+
+        # FIX 8: Pick the best candidate — more matched parts always wins
+        if candidates:
+            # Sort by (matched_parts desc, confidence desc) so full-name beats partial-name
+            candidates.sort(key=lambda c: (c[4], c[1]), reverse=True)
+            best = candidates[0]
+            tx.unit_no = best[0]
+            tx.match_confidence = best[1]
+            tx.match_method = best[2]
+            if best[3]:
+                tx.account_name = best[3]
+            if not tx.account_name:
+                names_list = self.kb_unit_to_name.get(tx.unit_no, [])
+                tx.account_name = names_list[0] if names_list else ""
+            # Collect alternatives
+            if name and len(name) > 3:
+                tx.alternative_matches = self._collect_fuzzy_alternatives(
+                    self._normalize_name(name), tx.unit_no)
+            return
 
         # Method 3: IBAN/account matching from narration
         iban = parser.extract_iban_from_description(tx.narration)
@@ -576,6 +632,15 @@ class DailyReconciler:
         # No match found
         tx.match_method = "unmatched"
         tx.match_confidence = 0.0
+
+    @staticmethod
+    def _is_variant(name_a: str, name_b: str) -> bool:
+        """Check if two name tokens are Arabic transliteration variants of each other."""
+        for canonical, variants in NAME_VARIANTS.items():
+            all_forms = {canonical} | set(variants)
+            if name_a in all_forms and name_b in all_forms:
+                return True
+        return False
 
     def _fuzzy_name_match(self, normalized_name: str, return_all: bool = False):
         """Fuzzy match a name against the knowledge base.
@@ -597,18 +662,17 @@ class DailyReconciler:
         best_score = 0.0
         all_candidates = []  # collect all candidates above threshold
 
-        for kb_name, kb_unit in self.kb_name_to_unit.items():
+        for kb_name, kb_units in self.kb_name_to_unit.items():
+            kb_unit = kb_units[0]  # FIX 7: kb_name_to_unit values are now lists
             kb_parts = [k for k in kb_name.split() if len(k) > 2]
             if not kb_parts:
                 continue
 
             # Phase 1: EXACT token match (no variant expansion)
-            # Count how many of the input name parts appear exactly in the KB name
             exact_matches = sum(1 for p in significant_parts if p in kb_parts)
             exact_score = exact_matches / max(len(significant_parts), len(kb_parts))
 
             # Phase 2: Last name (surname) must match for high confidence
-            # The last significant token is typically the surname (most distinctive)
             last_name = significant_parts[-1] if significant_parts else ""
             last_name_matches = last_name in kb_parts
 
@@ -635,19 +699,21 @@ class DailyReconciler:
                 # Surname matches but fewer exact tokens
                 score = min(0.85, variant_score)
             else:
-                # Surname doesn't match — much lower confidence
-                score = min(0.5, variant_score * 0.6)
+                # FIX 3: Surname doesn't match — much lower confidence (was 0.5/0.6)
+                score = min(0.3, variant_score * 0.4)
 
             # Collect all candidates above 0.3 for alternative display
             if return_all and score >= 0.3:
+                names_list = self.kb_unit_to_name.get(kb_unit, [])
                 all_candidates.append({
                     "unit_no": kb_unit,
-                    "account_name": self.kb_unit_to_name.get(kb_unit, ""),
+                    "account_name": names_list[0] if names_list else "",
                     "confidence": round(min(1.0, score), 3),
                     "method": "name_fuzzy",
                 })
 
-            if score > best_score and score >= 0.4:
+            # FIX 4: Raised threshold from 0.4 to 0.55
+            if score > best_score and score >= 0.55:
                 best_score = score
                 best_unit = kb_unit
 
@@ -833,8 +899,8 @@ class DailyReconciler:
 
         # Build context for Claude
         kb_summary = []
-        for unit, name in sorted(self.kb_unit_to_name.items()):
-            kb_summary.append(f"  Unit {unit}: {name}")
+        for unit, names in sorted(self.kb_unit_to_name.items()):
+            kb_summary.append(f"  Unit {unit}: {', '.join(names)}")
 
         tx_list = []
         for i, tx in enumerate(unmatched):
@@ -896,7 +962,8 @@ Only return the JSON array, no other text."""
                     tx.match_method = method
                     # Look up name from KB if not already set
                     if not tx.account_name:
-                        tx.account_name = self.kb_unit_to_name.get(unit_no, "")
+                        names_list = self.kb_unit_to_name.get(unit_no, [])
+                        tx.account_name = names_list[0] if names_list else ""
 
                 ai_results.append({
                     "index": idx,
