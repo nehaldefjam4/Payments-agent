@@ -1126,12 +1126,39 @@ function processResult(data) {
     delay += 300;
   });
 
+  /* Store file mode globally */
+  STATE.fileMode = data.file_mode || 'both';
+
   /* After animations, populate panels */
   setTimeout(function() {
     showResults(data);
     buildTransactions(data);
-    buildSFActions(data);
     updateDashboard(data);
+
+    /* Corporate-only mode: hide SF tab, show message */
+    var sfTabBtn = document.querySelector('[data-tab="salesforce"]');
+    if (STATE.fileMode === 'corporate') {
+      if (sfTabBtn) {
+        sfTabBtn.style.opacity = '0.4';
+        sfTabBtn.title = 'Salesforce actions not needed for corporate transactions';
+      }
+      /* Show corporate-only banner in transactions */
+      var txHeader = document.getElementById('txTableContainer');
+      if (txHeader) {
+        var banner = document.createElement('div');
+        banner.className = 'alert alert-info';
+        banner.style.cssText = 'background:rgba(59,130,246,0.1);border:1px solid var(--blue);border-radius:8px;padding:12px 16px;margin-bottom:16px;color:var(--blue);';
+        banner.innerHTML = '📋 <strong>Corporate Mode</strong> — Master sheet (Corporate tab) updated. No Salesforce actions required.';
+        txHeader.insertBefore(banner, txHeader.firstChild);
+      }
+    } else {
+      /* Escrow or both: show SF actions */
+      buildSFActions(data);
+      if (sfTabBtn) {
+        sfTabBtn.style.opacity = '1';
+        sfTabBtn.title = '';
+      }
+    }
 
     /* Show download button if master sheet base64 is available */
     if (data.download && data.download.master_sheet_base64) {

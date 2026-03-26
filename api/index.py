@@ -194,30 +194,39 @@ async def reconcile_endpoint(
         # ── Step 5: Salesforce sync (read-only check + dry-run actions) ──
         sf_actions = []
         sf_status = {"connected": False}
-        try:
-            from services.salesforce_service import SalesforceService
-            sf_service = SalesforceService()
-            if sf_service.connect():
-                sf_status = sf_service.get_status()
-                project_name = project if project != "auto" else "CENTURY"
-                sf_actions = reconciler.sync_with_salesforce(sf_service, project_name)
-                steps.append({
-                    "step": 5,
-                    "action": f"Salesforce sync: {len(sf_actions)} units processed",
-                    "status": "done",
-                })
-            else:
-                steps.append({
-                    "step": 5,
-                    "action": f"Salesforce not connected: {sf_service.connection_error}",
-                    "status": "skipped",
-                })
-        except Exception as e:
+        # Only attempt SF sync if escrow file was uploaded
+        is_corporate_only = corporate_path and not escrow_path
+        if is_corporate_only:
             steps.append({
                 "step": 5,
-                "action": f"Salesforce sync skipped: {e}",
+                "action": "Salesforce sync skipped — corporate transactions only (no SF action needed)",
                 "status": "skipped",
             })
+        else:
+            try:
+                from services.salesforce_service import SalesforceService
+                sf_service = SalesforceService()
+                if sf_service.connect():
+                    sf_status = sf_service.get_status()
+                    project_name = project if project != "auto" else "CENTURY"
+                    sf_actions = reconciler.sync_with_salesforce(sf_service, project_name)
+                    steps.append({
+                        "step": 5,
+                        "action": f"Salesforce sync: {len(sf_actions)} units processed",
+                        "status": "done",
+                    })
+                else:
+                    steps.append({
+                        "step": 5,
+                        "action": f"Salesforce not connected: {sf_service.connection_error}",
+                        "status": "skipped",
+                    })
+            except Exception as e:
+                steps.append({
+                    "step": 5,
+                    "action": f"Salesforce sync skipped: {e}",
+                    "status": "skipped",
+                })
 
         # ── Step 6: Update master sheet with matched data ──
         output_path = os.path.join(tmp_dir, "Updated_Output.xlsx")
@@ -228,14 +237,22 @@ async def reconcile_endpoint(
             "status": "done",
         })
 
-        # ── Step 7: Generate receipts ──
-        receipt_dir = os.path.join(tmp_dir, "receipts")
-        receipts = reconciler.generate_receipts(receipt_dir)
-        steps.append({
-            "step": 7,
-            "action": f"Generated {len(receipts)} payment receipts",
-            "status": "done",
-        })
+        # ── Step 7: Generate receipts (escrow only) ──
+        receipts = []
+        if is_corporate_only:
+            steps.append({
+                "step": 7,
+                "action": "Receipt generation skipped — corporate transactions only",
+                "status": "skipped",
+            })
+        else:
+            receipt_dir = os.path.join(tmp_dir, "receipts")
+            receipts = reconciler.generate_receipts(receipt_dir)
+            steps.append({
+                "step": 7,
+                "action": f"Generated {len(receipts)} payment receipts",
+                "status": "done",
+            })
 
         # ── Build response ──
         summary = reconciler.get_summary()
@@ -251,8 +268,14 @@ async def reconcile_endpoint(
             with open(output_path, "rb") as f:
                 master_download = base64.b64encode(f.read()).decode("utf-8")
 
+        # Determine which file types were processed
+        has_escrow = escrow_path is not None
+        has_corporate = corporate_path is not None
+        file_mode = "escrow" if has_escrow and not has_corporate else "corporate" if has_corporate and not has_escrow else "both" if has_escrow and has_corporate else "none"
+
         return {
             "status": "ok",
+            "file_mode": file_mode,
             "agent_steps": steps,
             "master_stats": {
                 "units_known": master_stats.get("units_known", 0),
