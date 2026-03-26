@@ -525,9 +525,13 @@ class DailyReconciler:
             tx.unit_no = unit
             tx.match_confidence = conf
             tx.match_method = "unit_in_narration"
-            # Look up name from knowledge base
             names_list = self.kb_unit_to_name.get(unit, [])
             tx.account_name = names_list[0] if names_list else ""
+            # Still collect alternatives based on any name in narration
+            name = parser.extract_name_from_description(tx.narration)
+            if name and len(name) > 3:
+                tx.alternative_matches = self._collect_fuzzy_alternatives(
+                    self._normalize_name(name), tx.unit_no)
             return
 
         # Collect all candidates from multiple methods, then pick the best (FIX 8)
@@ -623,10 +627,19 @@ class DailyReconciler:
             if not tx.account_name:
                 names_list = self.kb_unit_to_name.get(tx.unit_no, [])
                 tx.account_name = names_list[0] if names_list else ""
-            # Collect alternatives
-            if name and len(name) > 3:
+            # ALWAYS collect alternatives — this is the safety net for wrong matches
+            # Use extracted name if available, otherwise use account_name from KB
+            alt_name = name if name and len(name) > 3 else tx.account_name
+            if alt_name and len(alt_name) > 3:
                 tx.alternative_matches = self._collect_fuzzy_alternatives(
-                    self._normalize_name(name), tx.unit_no)
+                    self._normalize_name(alt_name), tx.unit_no)
+            # Also add remaining candidates as alternatives
+            if len(candidates) > 1:
+                for c in candidates[1:4]:  # top 3 runner-ups
+                    alt = {"unit_no": c[0], "confidence": c[1], "method": c[2],
+                           "account_name": self.kb_unit_to_name.get(c[0], [""])[0]}
+                    if alt not in tx.alternative_matches:
+                        tx.alternative_matches.append(alt)
             return
 
         # Method 3: IPP reference unit extraction
@@ -751,8 +764,8 @@ class DailyReconciler:
                 # FIX 3: Surname doesn't match — much lower confidence (was 0.5/0.6)
                 score = min(0.3, variant_score * 0.4)
 
-            # Collect all candidates above 0.3 for alternative display
-            if return_all and score >= 0.3:
+            # Collect all candidates above 0.15 for alternative display (lower threshold than matching)
+            if return_all and score >= 0.15:
                 names_list = self.kb_unit_to_name.get(kb_unit, [])
                 all_candidates.append({
                     "unit_no": kb_unit,
