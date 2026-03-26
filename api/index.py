@@ -812,6 +812,85 @@ async def sf_update_queue_status(item_id: str, request: Request):
 
 
 # ===========================================================================
+# TESTING ENDPOINTS — for validating SF queue flow
+# ===========================================================================
+
+@app.post("/api/salesforce/test/reset-queue")
+async def sf_test_reset_queue():
+    """Reset all queue items back to 'pending' for re-testing."""
+    sb = get_supabase()
+    if not sb:
+        raise HTTPException(status_code=500, detail="Supabase not connected")
+    try:
+        sb.table("sf_action_queue").update({
+            "status": "pending",
+            "error_message": None,
+            "completed_at": None,
+            "updated_at": "now()",
+        }).neq("status", "____never____").execute()
+        result = sb.table("sf_action_queue").select("id, unit_no, status").execute()
+        return {"reset": True, "count": len(result.data or []), "items": result.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/salesforce/test/simulate-complete")
+async def sf_test_simulate_complete(request: Request):
+    """Simulate Claude Cowork completing one pending item (marks oldest pending as completed)."""
+    sb = get_supabase()
+    if not sb:
+        raise HTTPException(status_code=500, detail="Supabase not connected")
+    try:
+        pending = sb.table("sf_action_queue").select("*").eq("status", "pending").order("created_at").limit(1).execute()
+        if not pending.data:
+            return {"message": "No pending items", "completed": None}
+        item = pending.data[0]
+        sb.table("sf_action_queue").update({
+            "status": "completed",
+            "completed_at": "now()",
+            "updated_at": "now()",
+        }).eq("id", item["id"]).execute()
+        return {"message": f"Simulated completion for Unit {item['unit_no']}", "completed": item}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/salesforce/test/queue-status")
+async def sf_test_queue_status():
+    """View full queue status for testing."""
+    sb = get_supabase()
+    if not sb:
+        raise HTTPException(status_code=500, detail="Supabase not connected")
+    try:
+        result = sb.table("sf_action_queue").select("*").order("created_at").execute()
+        items = result.data or []
+        by_status = {}
+        for item in items:
+            s = item.get("status", "unknown")
+            by_status[s] = by_status.get(s, 0) + 1
+        return {
+            "total": len(items),
+            "by_status": by_status,
+            "items": items,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/salesforce/test/clear-queue")
+async def sf_test_clear_queue():
+    """Delete all items from the queue (full reset for fresh test)."""
+    sb = get_supabase()
+    if not sb:
+        raise HTTPException(status_code=500, detail="Supabase not connected")
+    try:
+        sb.table("sf_action_queue").delete().neq("id", "00000000-0000-0000-0000-000000000000").execute()
+        return {"cleared": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ===========================================================================
 # SALESFORCE CREDENTIALS MANAGEMENT (stored in Supabase)
 # ===========================================================================
 
