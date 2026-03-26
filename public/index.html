@@ -1131,17 +1131,24 @@ function processResult(data) {
 
   /* After animations, populate panels */
   setTimeout(function() {
+    console.log('[PaymentsAgent] processResult data:', JSON.stringify({file_mode: data.file_mode, matched: (data.matching||{}).matched, matched_details_len: (data.matched_details||[]).length, needs_receipt_len: (data.needs_receipt||[]).length}));
     showResults(data);
     buildTransactions(data);
     updateDashboard(data);
 
-    /* Corporate-only mode: hide SF tab, show message */
+    /* Always build SF actions log (shows matching results) */
+    buildSFActions(data);
+
+    /* Corporate-only mode: hide SF workflow section, show message */
     var sfTabBtn = document.querySelector('[data-tab="salesforce"]');
     if (STATE.fileMode === 'corporate') {
       if (sfTabBtn) {
         sfTabBtn.style.opacity = '0.4';
         sfTabBtn.title = 'Salesforce actions not needed for corporate transactions';
       }
+      /* Hide workflow + update sections for corporate */
+      document.getElementById('sfWorkflowSection').style.display = 'none';
+      document.getElementById('sfUpdateSection').style.display = 'none';
       /* Show corporate-only banner in transactions */
       var txHeader = document.getElementById('txTableContainer');
       if (txHeader) {
@@ -1152,8 +1159,6 @@ function processResult(data) {
         txHeader.insertBefore(banner, txHeader.firstChild);
       }
     } else {
-      /* Escrow or both: show SF actions */
-      buildSFActions(data);
       if (sfTabBtn) {
         sfTabBtn.style.opacity = '1';
         sfTabBtn.title = '';
@@ -1513,11 +1518,11 @@ function sortTx(col) {
    SF ACTIONS LOG
    ================================================================ */
 function buildSFActions(data) {
+  console.log('[PaymentsAgent] buildSFActions called, data keys:', Object.keys(data));
   var sf = data.salesforce || {};
   STATE.sfActions = sf.actions || [];
   var log = document.getElementById('sfActionsLog');
-
-  /* Safety badges removed — production mode */
+  if (!log) { console.error('[PaymentsAgent] sfActionsLog element NOT FOUND'); return; }
 
   /* Build a live activity log from both API actions + pending workflow units */
   var logEntries = [];
@@ -1554,6 +1559,8 @@ function buildSFActions(data) {
       logEntries.push({ icon: '&#128260;', iconCls: 'write', title: 'Unit ' + (md.unit_no || md.unit || '?') + ' (prev unreconciled)', detail: 'Now matched — ' + escHtml(md.account_name || md.client_name || '') });
     });
   }
+
+  console.log('[PaymentsAgent] SF log entries built:', logEntries.length, 'matched:', m.matched, 'matchedDetails:', matchedDetails.length, 'needsReceipt:', needsReceipt.length, 'unrecMatched:', unrecMatched.length);
 
   if (!logEntries.length) {
     log.innerHTML = '<div class="empty-state" style="padding:30px;"><div class="empty-state-text">No actions to display. Run reconciliation first.</div></div>';
