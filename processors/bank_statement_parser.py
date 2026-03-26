@@ -319,7 +319,7 @@ class BankStatementParser:
             "debit": ["debit", "withdrawal", "debit amount", "debits"],
             "amount": ["amount", "sum", "value"],
             "balance": ["balance", "running balance", "closing balance", "available balance"],
-            "reference": ["ref", "reference", "ref no", "cheque no", "chq no"],
+            "reference": ["ref", "reference", "ref no", "reference no", "reference no.", "cheque no", "chq no", "transaction reference"],
         }
 
         for row_idx, row in enumerate(rows[:20]):  # Scan first 20 rows
@@ -332,9 +332,20 @@ class BankStatementParser:
                 if not cell:
                     continue
                 for field, aliases in keywords.items():
-                    if any(alias == cell for alias in aliases):
-                        if field not in col_map:
-                            col_map[field] = col_idx
+                    matched = False
+                    for alias in aliases:
+                        if alias == cell:
+                            matched = True
+                            break
+                    # Contains fallback — but only if cell starts with the alias
+                    # (prevents "value date" matching the "date" field)
+                    if not matched:
+                        for alias in aliases:
+                            if len(alias) > 2 and cell.startswith(alias):
+                                matched = True
+                                break
+                    if matched and field not in col_map:
+                        col_map[field] = col_idx
 
             # Need at least date + (credit or amount) to be a valid header
             if "date" in col_map and ("credit" in col_map or "amount" in col_map):
