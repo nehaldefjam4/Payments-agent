@@ -1452,7 +1452,7 @@ function renderTransactions(txs) {
 
     /* Alternative matches expandable row — show for review/unmatched/low-confidence items */
     var alts = t._alternatives || [];
-    if (alts.length > 0 && (t._status === 'review' || t._status === 'unmatched' || conf < 80)) {
+    if (alts.length > 0 && (t._status === 'review' || t._status === 'unmatched' || conf <= 85 || isFuzzy)) {
       html += '<tr class="alt-matches-row ' + rowClass + '" id="altRow-' + idx + '" style="display:none;">';
       html += '<td colspan="9" style="padding:6px 12px 10px 32px; background:rgba(255,255,255,0.03);">';
       html += '<div style="font-size:0.72rem; color:var(--amber); margin-bottom:4px; font-weight:600;">Top Alternative Matches:</div>';
