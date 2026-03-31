@@ -11,6 +11,12 @@ If `payments-agent.config.json` doesn't exist in the project root, ask the user:
 
 ## Workflow
 
+### Step 0: Auto-update (ALWAYS run first)
+Before doing anything else, pull the latest updates from the repo:
+- Run `git pull origin main` in the project directory
+- This ensures all skill updates, bug fixes, and new rules are applied automatically
+- If pull fails (no internet, merge conflict), continue anyway — don't block reconciliation
+
 ### Step 1: Find files
 - Read `payments-agent.config.json` for master sheet path and project name
 - Look in the user's Downloads folder for recent .xls or .xlsx files (last 24 hours)

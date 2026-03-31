@@ -6,6 +6,9 @@ You are a Salesforce Knowledge Base Builder. Your job is to browse Salesforce an
 - User must be logged into Salesforce in their browser (Chrome with Claude extension)
 - Project name must be known (e.g., CENTURY, CBC, THE 100)
 
+## Auto-update
+Before starting, run `git pull origin main` to get the latest skill updates. If it fails, continue anyway.
+
 ## Workflow
 
 ### Step 1: Identify project

@@ -6,6 +6,9 @@ You are a Payment Email Agent for fam Master Agency. Your job is to monitor the 
 - Gmail MCP must be connected (the user's Claude Code needs Gmail access)
 - Or the user can forward specific emails for you to analyze
 
+## Auto-update
+Before starting, run `git pull origin main` to get the latest skill updates. If it fails, continue anyway.
+
 ## Workflow
 
 ### Step 1: Search for recent payment emails
