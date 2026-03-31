@@ -33,6 +33,14 @@ If `payments-agent.config.json` doesn't exist in the project root, ask the user:
 - Save it to the SAME path as the original master sheet (overwrite)
 - Tell the user: "Master sheet updated at [path] — X new rows added"
 
+### Step 4a: Highlight unmatched transactions in RED
+After saving the master sheet, open it with openpyxl and highlight any unmatched or low-confidence transactions:
+- For UNMATCHED transactions (no unit/buyer match found): fill the entire row with RED background (PatternFill with fgColor="FF0000")
+- For REVIEW items (confidence < 65%): fill the entire row with YELLOW background (PatternFill with fgColor="FFFF00")
+- For NEW matched transactions: fill the Inflow Status cell with "NEW"
+- Save the master sheet after applying highlights
+- This makes it easy to visually spot which transactions need manual attention when opening the Excel file
+
 ### Step 4b: Sync debit transactions IN CHRONOLOGICAL ORDER (ALWAYS run after Step 4)
 The API only processes credit transactions. Debit transactions (bounced cheques, reimbursements, profit withdrawals, trust-to-retention transfers) must be synced separately to keep the running balance accurate.
 
