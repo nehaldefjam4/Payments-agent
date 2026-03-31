@@ -70,9 +70,6 @@ The master sheet must mirror the bank statement's transaction order so the runni
 - For credit transactions: use the reconciliation API
 - For debit transactions: use openpyxl directly (Step 4b) since the API doesn't handle debits
 - If corporate file only → skip Salesforce entirely
-- Always show the user what was matched before updating
-- For REVIEW items, always ask for confirmation
-- The master sheet has two tabs: "Updated Sheet_Escrow Account" and "Updated Sheet_Corporate"
 
 ## Multi-buyer units
 Some units have multiple buyers. When recording ANY transaction (credit or debit) for these units, ALWAYS include ALL buyer names in the Account Name cell, separated by a newline character (\n).
@@ -93,6 +90,9 @@ When the API returns a matched transaction, ALWAYS validate the Account Name:
 4. NEVER save junk/garbage text as the Account Name — always resolve it to a real buyer name
 
 This is especially important for cheque clearings (OUTWARD CLEARING) where the narration often doesn't contain the buyer's name.
+- Always show the user what was matched before updating
+- For REVIEW items, always ask for confirmation
+- The master sheet has two tabs: "Updated Sheet_Escrow Account" and "Updated Sheet_Corporate"
 
 ## File detection patterns
 - Escrow files: usually named "Escrow*.xls" or contain "escrow" in the name
