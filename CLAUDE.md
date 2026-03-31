@@ -1,6 +1,6 @@
 # Payments Agent — fam Master Agency
 
-An AI-powered payment reconciliation agent for fam Master Agency (Dubai real estate developer). It takes escrow and corporate bank statements downloaded from WhatsApp, automatically matches each transaction to the correct unit and buyer in the master payment sheet, inserts both credits and debits in chronological order so the running balance always matches the bank, validates buyer names (with Salesforce fallback), and updates Salesforce payment records.
+Automatically matches bank transactions to unit payments, updates the master escrow/corporate sheet with credits and debits, validates buyer names, and syncs payment status to Salesforce.
 
 ## How It Works
 
