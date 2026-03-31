@@ -33,6 +33,33 @@ If `payments-agent.config.json` doesn't exist in the project root, ask the user:
 - Save it to the SAME path as the original master sheet (overwrite)
 - Tell the user: "Master sheet updated at [path] — X new rows added"
 
+### Step 4b: Sync debit transactions IN CHRONOLOGICAL ORDER (ALWAYS run after Step 4)
+The API only processes credit transactions. Debit transactions (bounced cheques, reimbursements, profit withdrawals, trust-to-retention transfers) must be synced separately to keep the running balance accurate.
+
+**CRITICAL: Debits must be inserted in chronological order, NOT appended at the end.**
+The master sheet must mirror the bank statement's transaction order so the running balance is correct row-by-row.
+
+**Process:**
+1. Read the escrow/corporate bank statement file using openpyxl
+2. Read the master sheet's escrow/corporate tab
+3. Find ALL rows in the bank statement where the Debit column has a non-zero value
+4. Compare against the master sheet — build a set of (date, transaction_ref, debit_amount) from existing master rows
+5. For any debit transaction NOT already in the master sheet:
+   a. Determine the correct chronological position based on Transaction Date
+   b. INSERT the debit row at the correct position among credits (same date), maintaining the bank statement's exact order
+   c. Copy all columns: Transaction Date, Value Date, Narration, Transaction Reference, Debit, Credit, Running Balance, Unit No., Account Name, Receipt, Inflow Status
+6. After inserting all missing debits, verify the running balance of the last row matches the bank statement's last running balance
+7. Save the master sheet
+8. Report: "Added X debit transactions in chronological order — final balance: AED X (matches bank statement: YES/NO)"
+
+**Important:**
+- ALWAYS run this step — never skip it
+- Debits must be INTERLEAVED with credits in date order, not appended at the bottom
+- The Running Balance column must stay accurate row-by-row (each row's balance = previous balance + credit - debit)
+- After insertion, verify final balance matches escrow bank statement's last balance
+- Debit types include: CHEQUE RETURNED, OUTWARD REJECT, TRANSFER (reimbursements, profit withdrawals, 5% retention, trust-to-retention)
+- Only sync debits that are AFTER the cutoff date in the config (or after the last existing transaction date in the master sheet if no cutoff)
+
 ### Step 5: Salesforce (if escrow file)
 - Show units that need Salesforce update
 - Ask: "Do you want to update Salesforce for these units?"
@@ -40,11 +67,32 @@ If `payments-agent.config.json` doesn't exist in the project root, ask the user:
 - Tell user: "Units queued for Salesforce update"
 
 ## Important rules
-- NEVER modify the master sheet manually — always use the API
+- For credit transactions: use the reconciliation API
+- For debit transactions: use openpyxl directly (Step 4b) since the API doesn't handle debits
 - If corporate file only → skip Salesforce entirely
 - Always show the user what was matched before updating
 - For REVIEW items, always ask for confirmation
 - The master sheet has two tabs: "Updated Sheet_Escrow Account" and "Updated Sheet_Corporate"
+
+## Multi-buyer units
+Some units have multiple buyers. When recording ANY transaction (credit or debit) for these units, ALWAYS include ALL buyer names in the Account Name cell, separated by a newline character (\n).
+
+**Known multi-buyer units:**
+- **Unit 301**: Two buyer groups — when payment is from either buyer, the Account Name cell must contain BOTH names:
+  - Group 1: "Jitin Joshi Vijay Kumar Joshi\nNitin Tirath Mirchandani"
+  - Group 2: "Ibrahim Bakr Nasif Ahmed Ali\nMohamed Fawzy Hamed Gad"
+  - Match the correct group based on the narration/sender name, but always include both names from that group
+
+After the API returns matched results, check if any matched unit is a multi-buyer unit. If the Account Name only has one buyer, replace it with the full multi-buyer name before saving to the master sheet.
+
+## Account Name validation & Salesforce fallback
+When the API returns a matched transaction, ALWAYS validate the Account Name:
+1. If the Account Name looks like junk/garbage text (e.g., "CHQ NO", "TRANSFERIPI TT", "SUDI IE", random abbreviations), it means the API failed to extract the real buyer name from the narration
+2. First, check if other rows for the SAME unit already have a valid Account Name in the master sheet — reuse that name
+3. If no valid name exists in the master sheet, query Salesforce to get the correct Account Name for that unit
+4. NEVER save junk/garbage text as the Account Name — always resolve it to a real buyer name
+
+This is especially important for cheque clearings (OUTWARD CLEARING) where the narration often doesn't contain the buyer's name.
 
 ## File detection patterns
 - Escrow files: usually named "Escrow*.xls" or contain "escrow" in the name
