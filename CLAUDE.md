@@ -1,34 +1,37 @@
 # Payments Agent — fam Master Agency
 
-This is the Payments Reconciliation Agent for fam Master Agency, a Dubai real estate developer. It reconciles bank statements (escrow & corporate) against the master payment sheet and updates Salesforce.
+An AI-powered payment reconciliation agent for fam Master Agency (Dubai real estate developer). It takes escrow and corporate bank statements downloaded from WhatsApp, automatically matches each transaction to the correct unit and buyer in the master payment sheet, inserts both credits and debits in chronological order so the running balance always matches the bank, validates buyer names (with Salesforce fallback), and updates Salesforce payment records.
+
+## How It Works
+
+1. **Save bank statement** — Download the escrow/corporate bank statement (`.xls` or `.xlsx`) from WhatsApp to your configured folder
+2. **Run `/reconcile`** — The agent finds the new bank statement files and the master sheet
+3. **Credit matching** — Sends both files to the reconciliation API which uses AI to match each credit transaction to a unit/buyer using narration text, unit numbers, buyer names, amounts, and Salesforce knowledge base data
+4. **Review matches** — Shows all matched transactions with confidence scores. High-confidence matches (>65%) are auto-accepted. Low-confidence matches are flagged for your review with alternative suggestions
+5. **Debit sync** — Scans the bank statement for debit transactions (bounced cheques, reimbursements, profit withdrawals, trust-to-retention transfers) and inserts them into the master sheet in the correct chronological position — interleaved with credits so the running balance stays accurate row-by-row
+6. **Name validation** — Checks every Account Name for junk/garbage text. If the name looks wrong, it pulls the correct name from existing master sheet rows or queries Salesforce
+7. **Master sheet update** — Saves the updated master sheet with all new credits and debits, then verifies the final balance matches the bank statement
+8. **Salesforce update** — Optionally queues matched escrow payments for Salesforce status updates
 
 ## Getting Started
 
-1. Run `/setup` to configure your environment (master sheet path, downloads folder, project name, Salesforce access)
-2. Run `/reconcile` to reconcile bank statements against the master sheet
+1. Run `/setup` to configure your environment (master sheet path, bank statement folder, project name, Salesforce access)
+2. Run `/reconcile` whenever you have new bank statements to process
 
 ## Available Commands
 
-- `/setup` — First-time setup. Configures master sheet path, downloads folder, project name, and Salesforce access. Saves to `payments-agent.config.json`.
-- `/reconcile` — Main reconciliation workflow. Finds bank statement files, matches transactions to units, updates the master sheet (credits via API + debits via openpyxl in chronological order), and optionally queues Salesforce updates.
-- `/sf-update` — Update Salesforce with reconciled payment data.
-- `/sf-sync` — Sync Salesforce project data to the local knowledge base for better matching.
+- `/setup` — First-time setup. Configures paths and saves to `payments-agent.config.json`
+- `/reconcile` — Main reconciliation workflow (credits + debits + name validation + balance verification)
+- `/sf-update` — Update Salesforce with reconciled payment data
+- `/sf-sync` — Sync Salesforce project data to the local knowledge base for better matching
+- `/check-emails` — Monitor payment-related emails and auto-draft replies
+- `/check-receipts` — Verify receipt status in Salesforce
 
-## Key Files
-
-- `payments-agent.config.json` — User configuration (created by `/setup`)
-- `.claude/commands/` — Skill definitions for each command
-- `api/` — Vercel serverless API functions
-- `agents/` — Agent logic (matching, Salesforce integration)
-- `processors/` — File processing (Excel parsing)
-
-## API
-
-The reconciliation API is hosted at `https://payments-agent.vercel.app/api/reconcile`
-
-## Notes
+## Key Rules
 
 - The master sheet has two tabs: "Updated Sheet_Escrow Account" and "Updated Sheet_Corporate"
-- Debit transactions (bounced cheques, transfers) are synced in chronological order to keep the running balance accurate
-- Multi-buyer units (e.g., Unit 301) must always have all buyer names in the Account Name cell
-- If the API can't determine the correct Account Name, check existing master sheet rows or query Salesforce
+- Debit transactions are always inserted in chronological order (never appended at the end)
+- The running balance must match the bank statement's balance after every update
+- Multi-buyer units (e.g., Unit 301) must always have ALL buyer names in the Account Name cell
+- If the Account Name can't be determined from the narration, check existing rows or query Salesforce
+- Corporate-only reconciliation skips Salesforce updates
