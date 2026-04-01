@@ -1,0 +1,579 @@
+{
+  "name": "Payments Agent - fam Master Agency",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 4
+            }
+          ]
+        }
+      },
+      "id": "trigger-schedule",
+      "name": "Check Every 4 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {},
+      "id": "trigger-manual",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 200]
+    },
+    {
+      "parameters": {
+        "url": "https://payments-agent.vercel.app/api/health",
+        "options": {}
+      },
+      "id": "health-check",
+      "name": "API Health Check",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [250, 100]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-health",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "ok",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-api-status",
+      "name": "API Healthy?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [500, 100]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "set-project",
+              "name": "project",
+              "value": "CENTURY",
+              "type": "string"
+            },
+            {
+              "id": "set-api-url",
+              "name": "api_url",
+              "value": "https://payments-agent.vercel.app",
+              "type": "string"
+            },
+            {
+              "id": "set-master-path",
+              "name": "master_sheet_path",
+              "value": "={{ $env.MASTER_SHEET_PATH || 'C:\\\\Users\\\\fam\\\\Documents\\\\Payment agent\\\\Century-Escrow & Corporate Account (9).xlsx' }}",
+              "type": "string"
+            },
+            {
+              "id": "set-escrow-folder",
+              "name": "bank_statement_folder",
+              "value": "={{ $env.BANK_STATEMENT_FOLDER || 'C:\\\\Users\\\\fam\\\\Documents\\\\Payment agent' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-config",
+      "name": "Load Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [750, 0]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.api_url }}/api/reconcile",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "master_file",
+              "inputDataFieldName": "master_file"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "escrow_file",
+              "inputDataFieldName": "escrow_file"
+            },
+            {
+              "parameterType": "formData",
+              "name": "project",
+              "value": "={{ $json.project }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "id": "reconcile-escrow",
+      "name": "Reconcile Escrow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1000, 0]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Load Config').item.json.api_url }}/api/reconcile",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "master_file",
+              "inputDataFieldName": "master_file"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "corporate_file",
+              "inputDataFieldName": "corporate_file"
+            },
+            {
+              "parameterType": "formData",
+              "name": "project",
+              "value": "={{ $('Load Config').item.json.project }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "id": "reconcile-corporate",
+      "name": "Reconcile Corporate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-new",
+              "leftValue": "={{ $json.matching.total_new }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "has-new-transactions",
+      "name": "New Transactions?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1250, 0]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "summary-total",
+              "name": "total_new",
+              "value": "={{ $json.matching.total_new }}",
+              "type": "number"
+            },
+            {
+              "id": "summary-matched",
+              "name": "new_matched",
+              "value": "={{ $json.matching.new_matched }}",
+              "type": "number"
+            },
+            {
+              "id": "summary-unmatched",
+              "name": "new_unmatched",
+              "value": "={{ $json.matching.new_unmatched }}",
+              "type": "number"
+            },
+            {
+              "id": "summary-resolved",
+              "name": "prev_resolved",
+              "value": "={{ $json.matching.prev_unreconciled_matched }}",
+              "type": "number"
+            },
+            {
+              "id": "summary-still",
+              "name": "still_unmatched",
+              "value": "={{ $json.matching.prev_unreconciled_still }}",
+              "type": "number"
+            },
+            {
+              "id": "summary-has-download",
+              "name": "has_updated_sheet",
+              "value": "={{ !!$json.download?.master_sheet_base64 }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "parse-results",
+      "name": "Parse Results",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [1500, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-unmatched",
+              "leftValue": "={{ $json.new_unmatched }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "has-unmatched",
+      "name": "Has Unmatched?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1750, 0]
+    },
+    {
+      "parameters": {
+        "subject": "=Payments Agent: {{ $json.total_new }} new transactions reconciled",
+        "message": "=<h2>Reconciliation Complete</h2>\n<table border='1' cellpadding='8' cellspacing='0'>\n<tr><td><strong>New Transactions</strong></td><td>{{ $json.total_new }}</td></tr>\n<tr><td><strong>Matched</strong></td><td>{{ $json.new_matched }}</td></tr>\n<tr><td><strong>Unmatched</strong></td><td style='color:red'>{{ $json.new_unmatched }}</td></tr>\n<tr><td><strong>Previously Resolved</strong></td><td>{{ $json.prev_resolved }}</td></tr>\n<tr><td><strong>Still Unmatched</strong></td><td>{{ $json.still_unmatched }}</td></tr>\n</table>\n<p>Master sheet has been updated.</p>",
+        "options": {}
+      },
+      "id": "notify-success",
+      "name": "Notify: Reconciliation Done",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [2000, -100],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-credentials",
+          "name": "Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "subject": "=ALERT: {{ $json.new_unmatched }} unmatched transactions need review",
+        "message": "=<h2 style='color:red'>Unmatched Transactions Found</h2>\n<p><strong>{{ $json.new_unmatched }}</strong> transactions could not be matched to any unit/buyer.</p>\n<p>These rows have been highlighted in <span style='background:red;color:white;padding:2px 6px'>RED</span> in the master sheet.</p>\n<p>Please open the master sheet and manually review these transactions.</p>\n<table border='1' cellpadding='8' cellspacing='0'>\n<tr><td><strong>Total New</strong></td><td>{{ $json.total_new }}</td></tr>\n<tr><td><strong>Matched</strong></td><td>{{ $json.new_matched }}</td></tr>\n<tr><td><strong>Unmatched</strong></td><td style='color:red;font-weight:bold'>{{ $json.new_unmatched }}</td></tr>\n</table>",
+        "options": {}
+      },
+      "id": "notify-unmatched",
+      "name": "Alert: Unmatched Transactions",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [2000, 100],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-credentials",
+          "name": "Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Load Config').item.json.api_url }}/api/salesforce/plan",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "units",
+              "value": "={{ JSON.stringify($('Reconcile Escrow').item.json.salesforce_units) }}"
+            },
+            {
+              "name": "project",
+              "value": "={{ $('Load Config').item.json.project }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "queue-salesforce",
+      "name": "Queue Salesforce Updates",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2250, 0]
+    },
+    {
+      "parameters": {
+        "subject": "Payments Agent: API is DOWN",
+        "message": "<h2 style='color:red'>API Health Check Failed</h2>\n<p>The Payments Agent API at <code>payments-agent.vercel.app</code> is not responding.</p>\n<p>Please check the Vercel deployment.</p>",
+        "options": {}
+      },
+      "id": "notify-api-down",
+      "name": "Alert: API Down",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [750, 200],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-credentials",
+          "name": "Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "subject": "Payments Agent: No new transactions",
+        "message": "<p>Reconciliation ran but found no new transactions. The master sheet is already up to date.</p>",
+        "options": {}
+      },
+      "id": "notify-no-new",
+      "name": "Notify: No New Transactions",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1500, 200]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Extract matched details for logging\nconst items = $input.all();\nconst results = items[0].json;\n\nconst matched = (results.matched_details || []).map(d => ({\n  date: d.date,\n  amount: d.credit,\n  unit: d.unit_no,\n  buyer: d.account_name,\n  method: d.match_method,\n  confidence: d.match_confidence\n}));\n\nconst unmatched = (results.unmatched_details || []).map(d => ({\n  date: d.date,\n  amount: d.credit,\n  narration: d.narration?.substring(0, 100)\n}));\n\nconst review = matched.filter(m => m.confidence < 0.65);\n\nreturn [{\n  json: {\n    matched_count: matched.length,\n    unmatched_count: unmatched.length,\n    review_count: review.length,\n    matched,\n    unmatched,\n    review\n  }\n}];"
+      },
+      "id": "process-details",
+      "name": "Process Match Details",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, -200]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Save updated master sheet from base64\nconst items = $input.all();\nconst data = items[0].json;\n\nif (data.download && data.download.master_sheet_base64) {\n  return [{\n    json: {\n      message: 'Master sheet base64 ready for save',\n      size: data.download.master_sheet_base64.length,\n      has_update: true\n    },\n    binary: {\n      master_sheet: {\n        data: data.download.master_sheet_base64,\n        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',\n        fileName: 'Century-Escrow & Corporate Account (9).xlsx'\n      }\n    }\n  }];\n}\n\nreturn [{ json: { has_update: false, message: 'No updated sheet in response' } }];"
+      },
+      "id": "extract-master-sheet",
+      "name": "Extract Updated Master Sheet",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1500, -200]
+    }
+  ],
+  "connections": {
+    "Check Every 4 Hours": {
+      "main": [
+        [
+          {
+            "node": "API Health Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "API Health Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API Health Check": {
+      "main": [
+        [
+          {
+            "node": "API Healthy?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API Healthy?": {
+      "main": [
+        [
+          {
+            "node": "Load Config",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alert: API Down",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Config": {
+      "main": [
+        [
+          {
+            "node": "Reconcile Escrow",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Reconcile Corporate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reconcile Escrow": {
+      "main": [
+        [
+          {
+            "node": "New Transactions?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Process Match Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New Transactions?": {
+      "main": [
+        [
+          {
+            "node": "Parse Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notify: No New Transactions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Results": {
+      "main": [
+        [
+          {
+            "node": "Has Unmatched?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Unmatched?": {
+      "main": [
+        [
+          {
+            "node": "Alert: Unmatched Transactions",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notify: Reconciliation Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify: Reconciliation Done": {
+      "main": [
+        [
+          {
+            "node": "Queue Salesforce Updates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert: Unmatched Transactions": {
+      "main": [
+        [
+          {
+            "node": "Queue Salesforce Updates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Match Details": {
+      "main": [
+        [
+          {
+            "node": "Extract Updated Master Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "payments",
+      "id": "1"
+    },
+    {
+      "name": "reconciliation",
+      "id": "2"
+    },
+    {
+      "name": "fam-master-agency",
+      "id": "3"
+    }
+  ]
+}
