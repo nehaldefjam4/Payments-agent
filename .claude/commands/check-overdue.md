@@ -7,11 +7,20 @@ Before starting, run `git pull origin main` to get the latest skill updates. If 
 
 ## Workflow
 
-### Step 1: Navigate to Salesforce
-1. Use Chrome MCP tools to open Salesforce
-2. Switch to "Fam Properties (Revamp)" app
-3. Go to Inventory tab
-4. Filter by project name from config
+### Step 1: Check Salesforce login status
+1. Use Chrome MCP tools to navigate to https://momentum-ability-3447.lightning.force.com
+2. Wait 5 seconds for page to load
+3. Check if the page shows the Salesforce dashboard/home (logged in) or a login screen
+4. If LOGGED IN: proceed to Step 2
+5. If NOT LOGGED IN:
+   - Notify the user: "Salesforce session expired. Please log into Salesforce in Chrome, then type 'continue' to resume the overdue scan."
+   - Wait for user confirmation before proceeding
+   - Do NOT attempt to enter any credentials
+
+### Step 1b: Navigate to project
+1. Switch to "Fam Properties (Revamp)" app via App Launcher
+2. Go to Inventory tab
+3. Filter by project name from config
 
 ### Step 2: Scan all sold units
 For each sold unit in the project:
