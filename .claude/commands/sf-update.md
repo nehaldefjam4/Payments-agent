@@ -49,13 +49,17 @@ If the bank payment received is MORE than the current installment's remaining am
 - Action: BP-00123 Amount Paid = full (150,000), BP-00124 Amount Paid += 50,000
 - Report: "AED 200,000 — AED 150,000 to BP-00123 (fully paid), AED 50,000 to BP-00124"
 
-#### Part B — Generate Receipt
-9. On the payment record page, click "Generate Invoice" button
-10. Wait for invoice to generate (check Files section)
+#### Part B — Generate Receipt(s)
+9. For EACH installment that was updated (including overpayment splits):
+   - Navigate to that payment record (BP-xxxxx)
+   - Click "Generate Invoice" button
+   - Wait for receipt PDF to appear in Files section
+   - If overpayment was split across 2+ installments, generate a receipt for EACH one
+10. Collect all generated receipt PDFs
 
 #### Part C — Generate Statement
 11. Navigate back to unit → "Account Statements" tab
-12. Verify latest statement entry exists
+12. Verify latest statement entry exists (reflects all updated payments)
 
 #### Part D — Send Email
 13. Use Activity panel (right side) → Email button
@@ -71,7 +75,13 @@ If the bank payment received is MORE than the current installment's remaining am
     Kindly acknowledge receipt of this email.
 
     Thank you."
-17. Attach: Receipt PDF + Statement PDF from Files
+
+    If overpayment was split, adjust the body:
+    "Please find the attached payment receipts for [Project] Unit No. [Unit].
+    AED [amount1] has been applied to [BP-1 period] and AED [amount2] has been applied to [BP-2 period].
+    Also attached is the updated Statement of Account for your reference."
+
+17. Attach: ALL generated Receipt PDFs + Statement PDF
 18. Send
 
 ### Step 3: Mark complete
