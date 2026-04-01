@@ -31,6 +31,24 @@ Before starting, run `git pull origin main` to get the latest skill updates. If 
    - If yes: skip (already up to date)
    - If no: click edit pencil on "Amount Paid" → update → save
 
+#### Part A2 — Handle Overpayment (bank amount > installment amount)
+If the bank payment received is MORE than the current installment's remaining amount:
+1. Calculate: excess = bank_amount - remaining_on_current_installment
+2. Update current installment: set Amount Paid = Sub Total (fully paid)
+3. Navigate back to Payments tab
+4. Find the NEXT upcoming installment (next BP-xxxxx by due date)
+5. Click into the next payment record
+6. Update Amount Paid on the next installment: add the excess amount
+7. Report to user: "AED [bank_amount] received — AED [current_remaining] applied to [current BP], AED [excess] applied to [next BP]"
+8. If the excess also exceeds the next installment, repeat the process for subsequent installments until the full bank amount is allocated
+
+**Example:**
+- Bank received: AED 200,000
+- Current BP-00123 remaining: AED 150,000
+- Next BP-00124 sub total: AED 150,000
+- Action: BP-00123 Amount Paid = full (150,000), BP-00124 Amount Paid += 50,000
+- Report: "AED 200,000 — AED 150,000 to BP-00123 (fully paid), AED 50,000 to BP-00124"
+
 #### Part B — Generate Receipt
 9. On the payment record page, click "Generate Invoice" button
 10. Wait for invoice to generate (check Files section)
