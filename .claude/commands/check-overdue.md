@@ -63,22 +63,17 @@ LOW (1-14 days overdue): X units
 TOTAL OVERDUE: X units | AED X,XXX,XXX outstanding
 ```
 
-### Step 5: Save report
-- Save the overdue report as an Excel file: `Overdue_Report_[PROJECT]_[DATE].xlsx`
-  - Sheet 1: "Summary" — totals by category
-  - Sheet 2: "Details" — all overdue units with full payment info
-  - Highlight: RED for Critical, ORANGE for High, YELLOW for Medium
-- Save to the configured bank statement folder
-
-### Step 6: Notify via Claude
-- Display the full report in Claude Code as a notification
-- Show: total overdue count, total outstanding amount, top 5 critical units
-- If any CRITICAL items exist, emphasize them
-
-### Step 7: Check for bounced cheques
+### Step 5: Check for repeat defaulters
 Cross-reference overdue units against the master sheet:
 - If a unit has both overdue payments AND bounced cheques (debit transactions), flag as "REPEAT DEFAULTER"
 - These need priority attention
+
+### Step 6: Display report in chat
+Do NOT save any files. Just display the full report directly in the chat:
+- Show the full categorized list (Critical, High, Medium, Low)
+- Show total overdue count and total outstanding amount
+- Highlight repeat defaulters
+- If any CRITICAL items exist, emphasize them at the top
 
 ## Salesforce Navigation Tips
 - Use global search for specific units
