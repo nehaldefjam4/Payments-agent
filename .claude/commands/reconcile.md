@@ -32,7 +32,33 @@ Before doing anything else, pull the latest updates from the repo:
 - Display: total new transactions, matched count, unmatched count
 - For each matched transaction show: Date | Amount | Unit | Client | Confidence | Method
 - For REVIEW items (confidence < 65%): show alternative matches and ask user to confirm or change
-- For UNMATCHED items: show narration and ask user if they know which unit it belongs to
+- For UNMATCHED items: run Step 3b first, then ask user for any remaining unmatched
+
+### Step 3b: Email scraping for unmatched transactions (Gmail MCP)
+For each UNMATCHED transaction, search Gmail to find clues about the unit/buyer:
+1. Extract key info from the bank narration: transaction reference, amount, sender name, date
+2. Search Gmail using these queries (try each until a match is found):
+   - `"{transaction_reference}"` — exact reference number
+   - `"{amount}" (payment OR transfer OR receipt)` — amount mentioned in emails
+   - `"{sender_name}" (unit OR payment OR transfer)` — buyer name + payment context
+3. If an email is found that mentions a unit number, buyer name, or payment details:
+   - Extract the unit number from the email body/subject
+   - Cross-reference with Salesforce knowledge base to confirm
+   - Upgrade the transaction from UNMATCHED to MATCHED with method "email_scrape"
+   - Set confidence based on how clear the match is (70-90%)
+4. Show the user what was found: "Found email from [buyer] on [date] mentioning Unit [X] — match this transaction?"
+5. Only proceed with user confirmation
+
+**Gmail search examples (always search in ma.crm@famproperties.com inbox):**
+- Bank narration has "REF: T99887766" → search `to:ma.crm@famproperties.com "T99887766"` in Gmail
+- Bank shows AED 95,000 from unknown → search `to:ma.crm@famproperties.com "95,000" payment` in Gmail
+- Bank shows "AHMED ALI" but no unit → search `to:ma.crm@famproperties.com "Ahmed Ali" unit` in Gmail
+- Also search sent emails: `from:ma.crm@famproperties.com "Ahmed Ali"` for previous receipts/replies that mention the unit
+
+**Important:**
+- This step only runs for UNMATCHED transactions — don't re-check already matched ones
+- Always show the email evidence to the user before confirming the match
+- If Gmail MCP is not connected, skip this step and proceed to ask user manually
 
 ### Step 4: Update master sheet
 - Download the updated master sheet from the API response (base64)
