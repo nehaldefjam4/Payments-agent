@@ -26,30 +26,32 @@ Before starting, run `git pull origin main` to get the latest skill updates. If 
 4. Click the Inventory result for the correct project
 5. You are now on the unit record page
 
-#### Part B — Generate Receipt (this is how payments are recorded + receipts generated)
-6. Click **"Generate Receipt"** button on the unit record page
-7. On the Receipt Form — **Page 1:**
+#### Part B — Generate Receipt (opens in a new tab)
+6. Click **"Generate Receipt"** button on the unit record page — this opens a **new tab** with the receipt form
+7. On the Receipt Form (new tab) — fill in the details:
+   - **Order Payment / BP(s)**: Select which booking payment(s) this amount belongs to:
+     - If the amount matches ONE BP exactly → select that single BP
+     - If the amount covers MULTIPLE BPs → select all applicable BPs (e.g., paid 2 installments together)
+     - If the amount is a PARTIAL payment → select the BP and the system will record partial
+     - If the amount EXCEEDS the current BP (overpayment) → select the current BP AND the next BP(s) to allocate the excess
+   - **Date**: The payment date (from bank statement)
    - **Amount**: Enter the bank transaction amount (e.g., AED 150,000)
    - **Payment Method**: Select based on the bank narration:
      - "INWARD REMITTANCE" or "BANKNET TRANSFER" → **Bank Transfer**
      - "OUTWARD CLEARING" or "CHQ" → **Cheque**
      - If narration says "CASH" → **Cash**
-   - **Select BP(s)**: Choose which booking payment(s) this amount belongs to:
-     - If the amount matches ONE BP exactly → select that single BP
-     - If the amount covers MULTIPLE BPs → select all applicable BPs (e.g., paid 2 installments together)
-     - If the amount is a PARTIAL payment → select the BP and the system will record partial
-     - If the amount EXCEEDS the current BP (overpayment) → select the current BP AND the next BP(s) to allocate the excess
-8. Click **Next**
-9. On the Receipt Form — **Page 2:**
+   - **Attachments**: If there are any supporting documents (proof of transfer, etc.), attach them here
+8. Click **Next** / **Continue** through the flow
+9. On the next page:
    - **Actual Amount Paid**: Confirm the amount (should match the bank amount)
    - **Description**: Enter the transaction narration from the bank statement (e.g., "INWARD REMITTANCETT REF: 530P5EB4FCD5BB58 AED 150000 RAED")
-10. Click **Next** → Receipt is generated automatically
+10. Click **Next** / **Continue** until the receipt is fully generated
 
 **Overpayment Example:**
 - Bank received: AED 200,000
 - BP-00123 remaining: AED 150,000
 - BP-00124 sub total: AED 150,000
-- On Page 1: Select BOTH BP-00123 and BP-00124
+- On the form: Select BOTH BP-00123 and BP-00124
 - System allocates: AED 150,000 to BP-00123 (fully paid), AED 50,000 to BP-00124
 - Receipt generated covering both
 
@@ -58,33 +60,46 @@ Before starting, run `git pull origin main` to get the latest skill updates. If 
 - Select ALL the BPs that the payment covers
 - The receipt will reflect the total amount across all selected BPs
 
-#### Part B2 — Verify Receipt PDF
-After receipt is generated, verify it before proceeding:
-11. Check the generated receipt PDF in the Files section on the unit/payment record
-12. Verify it contains:
+#### Part C — Verify Receipt & Get Receipt PDF from Account Statements
+All documents (receipts, SOA, invoices) are accessed from the **Booking Object → Account Statements** tab.
+
+11. Navigate back to the unit's **Booking Object** (the main booking record)
+12. Click **"Account Statements"** tab — this has several sections:
+    - **Full Account Statement**: Shows all debits and credits (Payment Notices + Receipts) with running balance — this is the SOA
+    - **Receipts**: Shows all amounts received for this account
+    - **Invoices / Proforma Invoices**: Payment notices generated for each BP
+13. In the **Receipts** section, find the receipt that was just generated
+14. Click on the receipt to open it
+15. In the receipt detail view, look at the **top right** for **"Review Receipt"**
+16. At the **bottom** of that window, click **"Download PDF"** — this is the Receipt PDF
+17. Verify the Receipt PDF contains:
     - Correct **Client Name** (matches purchaser)
     - Correct **Unit** number
     - Correct **Amount** (AED)
     - Correct **Mode of Payment** (Bank Transfer / Cheque / Cash)
     - Correct **Description** (e.g., "Payment Receipt for Q5, Unit No. 301" or "Partial Payment Receipt for On Handover, Unit No.803")
-13. If anything looks wrong, flag it to the user before sending
+18. If anything looks wrong, flag it to the user before sending
 
-#### Part C — Generate Statement of Account (SOA)
-14. Navigate back to unit → "Account Statements" tab
-15. Click to generate/view the latest SOA
-16. Verify the SOA shows the latest receipt entry (the one just generated) in the transaction list
-17. The SOA PDF should show: all Payment Notices, all Receipts (including the new one), running balance, and bank details at the bottom
+#### Part D — Generate SOA PDF
+19. From the **Booking Object**, click **"Generate SOA"** button — this generates the full Statement of Accounts PDF
+20. The SOA will show: all Payment Notices, all Receipts (including the new one), running balance, and bank details
+21. Download the SOA PDF
+
+**For Proforma Invoices (if needed):**
+- Proforma invoices are generated per BP (booking payment)
+- Go to each individual BP/invoice → click **"Generate Invoice"** to create that specific invoice PDF
+- These are separate from the receipt and SOA
 
 #### Part D — Send Email via Salesforce CRM
 **IMPORTANT: Always send emails THROUGH SALESFORCE, never through Gmail directly.**
 The buyer's email address is found inside the **Purchaser record** in Salesforce (click on the Purchaser name on the unit record → their email is on the contact/person account page).
 
-13. On the unit record page, use the **Activity panel** (right side) → click **Email** button
-14. **To**: The buyer's email from the Purchaser record in Salesforce
+22. On the unit record page, use the **Activity panel** (right side) → click **Email** button
+23. **To**: The buyer's email from the Purchaser record in Salesforce
     - Navigate to the unit → click the Purchaser name → find the email address
     - Copy it into the To field, or Salesforce may auto-populate it
-15. **Subject**: "Payment Receipt for [Project] Unit No. [Unit] | [Period]"
-16. **Body**:
+24. **Subject**: "Payment Receipt for [Project] Unit No. [Unit] | [Period]"
+25. **Body**:
     "Dear Valued Client,
 
     Good day!
@@ -100,8 +115,8 @@ The buyer's email address is found inside the **Purchaser record** in Salesforce
     AED [total_amount] has been applied to [BP-1 period] and [BP-2 period].
     Also attached is the updated Statement of Account for your reference."
 
-17. **Attach**: Receipt PDF + Statement PDF from the Files section on the unit/payment record
-18. **Send** — this sends through Salesforce CRM, keeping the email logged in the Activity History
+26. **Attach**: Receipt PDF (downloaded from Account Statements → Receipts → Review Receipt → Download PDF) + SOA PDF (generated from Booking Object → Generate SOA)
+27. **Send** — this sends through Salesforce CRM, keeping the email logged in the Activity History
 
 ### Step 3: Mark complete
 - POST to https://payments-agent.vercel.app/api/salesforce/queue/{id}/status
