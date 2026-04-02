@@ -58,9 +58,22 @@ Before starting, run `git pull origin main` to get the latest skill updates. If 
 - Select ALL the BPs that the payment covers
 - The receipt will reflect the total amount across all selected BPs
 
-#### Part C — Generate Statement of Account
-11. Navigate back to unit → "Account Statements" tab
-12. Verify latest statement entry exists (reflects the updated payment)
+#### Part B2 — Verify Receipt PDF
+After receipt is generated, verify it before proceeding:
+11. Check the generated receipt PDF in the Files section on the unit/payment record
+12. Verify it contains:
+    - Correct **Client Name** (matches purchaser)
+    - Correct **Unit** number
+    - Correct **Amount** (AED)
+    - Correct **Mode of Payment** (Bank Transfer / Cheque / Cash)
+    - Correct **Description** (e.g., "Payment Receipt for Q5, Unit No. 301" or "Partial Payment Receipt for On Handover, Unit No.803")
+13. If anything looks wrong, flag it to the user before sending
+
+#### Part C — Generate Statement of Account (SOA)
+14. Navigate back to unit → "Account Statements" tab
+15. Click to generate/view the latest SOA
+16. Verify the SOA shows the latest receipt entry (the one just generated) in the transaction list
+17. The SOA PDF should show: all Payment Notices, all Receipts (including the new one), running balance, and bank details at the bottom
 
 #### Part D — Send Email via Salesforce CRM
 **IMPORTANT: Always send emails THROUGH SALESFORCE, never through Gmail directly.**
