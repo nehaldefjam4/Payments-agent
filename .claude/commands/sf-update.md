@@ -62,11 +62,16 @@ Before starting, run `git pull origin main` to get the latest skill updates. If 
 11. Navigate back to unit → "Account Statements" tab
 12. Verify latest statement entry exists (reflects the updated payment)
 
-#### Part D — Send Email
-13. Use Activity panel (right side) → Email button
-14. To: buyer email (from purchaser record or KB)
-15. Subject: "Payment Receipt for [Project] Unit No. [Unit] | [Period]"
-16. Body:
+#### Part D — Send Email via Salesforce CRM
+**IMPORTANT: Always send emails THROUGH SALESFORCE, never through Gmail directly.**
+The buyer's email address is found inside the **Purchaser record** in Salesforce (click on the Purchaser name on the unit record → their email is on the contact/person account page).
+
+13. On the unit record page, use the **Activity panel** (right side) → click **Email** button
+14. **To**: The buyer's email from the Purchaser record in Salesforce
+    - Navigate to the unit → click the Purchaser name → find the email address
+    - Copy it into the To field, or Salesforce may auto-populate it
+15. **Subject**: "Payment Receipt for [Project] Unit No. [Unit] | [Period]"
+16. **Body**:
     "Dear Valued Client,
 
     Good day!
@@ -82,8 +87,8 @@ Before starting, run `git pull origin main` to get the latest skill updates. If 
     AED [total_amount] has been applied to [BP-1 period] and [BP-2 period].
     Also attached is the updated Statement of Account for your reference."
 
-17. Attach: Receipt PDF + Statement PDF from Files section
-18. Send
+17. **Attach**: Receipt PDF + Statement PDF from the Files section on the unit/payment record
+18. **Send** — this sends through Salesforce CRM, keeping the email logged in the Activity History
 
 ### Step 3: Mark complete
 - POST to https://payments-agent.vercel.app/api/salesforce/queue/{id}/status
