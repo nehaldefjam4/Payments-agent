@@ -19,47 +19,48 @@ Before starting, run `git pull origin main` to get the latest skill updates. If 
 
 ### Step 2: For each confirmed unit
 
-#### Part A — Update Payment in Fam Properties (Revamp) app
+#### Part A — Navigate to Unit in Fam Properties (Revamp) app
 1. Use Chrome MCP tools to navigate Salesforce
 2. Switch to "Fam Properties (Revamp)" app
 3. Search for the unit number in global search
 4. Click the Inventory result for the correct project
-5. Click "Payments" tab on the unit record
-6. Find the booking payment (BP-xxxxx) matching the period/amount
-7. Click into the payment record
-8. Check: does Amount Paid already match the bank amount?
-   - If yes: skip (already up to date)
-   - If no: click edit pencil on "Amount Paid" → update → save
+5. You are now on the unit record page
 
-#### Part A2 — Handle Overpayment (bank amount > installment amount)
-If the bank payment received is MORE than the current installment's remaining amount:
-1. Calculate: excess = bank_amount - remaining_on_current_installment
-2. Update current installment: set Amount Paid = Sub Total (fully paid)
-3. Navigate back to Payments tab
-4. Find the NEXT upcoming installment (next BP-xxxxx by due date)
-5. Click into the next payment record
-6. Update Amount Paid on the next installment: add the excess amount
-7. Report to user: "AED [bank_amount] received — AED [current_remaining] applied to [current BP], AED [excess] applied to [next BP]"
-8. If the excess also exceeds the next installment, repeat the process for subsequent installments until the full bank amount is allocated
+#### Part B — Generate Receipt (this is how payments are recorded + receipts generated)
+6. Click **"Generate Receipt"** button on the unit record page
+7. On the Receipt Form — **Page 1:**
+   - **Amount**: Enter the bank transaction amount (e.g., AED 150,000)
+   - **Payment Method**: Select based on the bank narration:
+     - "INWARD REMITTANCE" or "BANKNET TRANSFER" → **Bank Transfer**
+     - "OUTWARD CLEARING" or "CHQ" → **Cheque**
+     - If narration says "CASH" → **Cash**
+   - **Select BP(s)**: Choose which booking payment(s) this amount belongs to:
+     - If the amount matches ONE BP exactly → select that single BP
+     - If the amount covers MULTIPLE BPs → select all applicable BPs (e.g., paid 2 installments together)
+     - If the amount is a PARTIAL payment → select the BP and the system will record partial
+     - If the amount EXCEEDS the current BP (overpayment) → select the current BP AND the next BP(s) to allocate the excess
+8. Click **Next**
+9. On the Receipt Form — **Page 2:**
+   - **Actual Amount Paid**: Confirm the amount (should match the bank amount)
+   - **Description**: Enter the transaction narration from the bank statement (e.g., "INWARD REMITTANCETT REF: 530P5EB4FCD5BB58 AED 150000 RAED")
+10. Click **Next** → Receipt is generated automatically
 
-**Example:**
+**Overpayment Example:**
 - Bank received: AED 200,000
-- Current BP-00123 remaining: AED 150,000
-- Next BP-00124 sub total: AED 150,000
-- Action: BP-00123 Amount Paid = full (150,000), BP-00124 Amount Paid += 50,000
-- Report: "AED 200,000 — AED 150,000 to BP-00123 (fully paid), AED 50,000 to BP-00124"
+- BP-00123 remaining: AED 150,000
+- BP-00124 sub total: AED 150,000
+- On Page 1: Select BOTH BP-00123 and BP-00124
+- System allocates: AED 150,000 to BP-00123 (fully paid), AED 50,000 to BP-00124
+- Receipt generated covering both
 
-#### Part B — Generate Receipt(s)
-9. For EACH installment that was updated (including overpayment splits):
-   - Navigate to that payment record (BP-xxxxx)
-   - Click "Generate Invoice" button
-   - Wait for receipt PDF to appear in Files section
-   - If overpayment was split across 2+ installments, generate a receipt for EACH one
-10. Collect all generated receipt PDFs
+**Multiple payments in one transaction:**
+- Sometimes a buyer pays 2-3 installments together in one bank transfer
+- Select ALL the BPs that the payment covers
+- The receipt will reflect the total amount across all selected BPs
 
-#### Part C — Generate Statement
+#### Part C — Generate Statement of Account
 11. Navigate back to unit → "Account Statements" tab
-12. Verify latest statement entry exists (reflects all updated payments)
+12. Verify latest statement entry exists (reflects the updated payment)
 
 #### Part D — Send Email
 13. Use Activity panel (right side) → Email button
@@ -76,12 +77,12 @@ If the bank payment received is MORE than the current installment's remaining am
 
     Thank you."
 
-    If overpayment was split, adjust the body:
-    "Please find the attached payment receipts for [Project] Unit No. [Unit].
-    AED [amount1] has been applied to [BP-1 period] and AED [amount2] has been applied to [BP-2 period].
+    If payment covered multiple BPs, adjust the body:
+    "Please find the attached payment receipt for [Project] Unit No. [Unit].
+    AED [total_amount] has been applied to [BP-1 period] and [BP-2 period].
     Also attached is the updated Statement of Account for your reference."
 
-17. Attach: ALL generated Receipt PDFs + Statement PDF
+17. Attach: Receipt PDF + Statement PDF from Files section
 18. Send
 
 ### Step 3: Mark complete
